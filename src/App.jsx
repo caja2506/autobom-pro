@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   FolderGit2, Database, Search, Plus, Trash2, 
-  AlertCircle, ChevronRight, DollarSign, ArrowLeft, 
+  ChevronRight, DollarSign, ArrowLeft, 
   PackagePlus, X, Pencil, BrainCircuit, 
   Loader2, Sparkles, Filter, Zap, Activity, Tag
 } from 'lucide-react';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, onSnapshot, doc, setDoc, getDocs, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { getFirestore, collection, onSnapshot, doc, setDoc, getDocs, deleteDoc, updateDoc, writeBatch, query, where } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDGUTnCBWhPpyOrjAf5eQbQaQz0Dm18NXc",
@@ -32,7 +32,7 @@ const API_KEY = "AIzaSyBuezcZz-QrxVBDBDBrWUKzrbbhFa4RVjM";
 const MODEL_NAME = "gemini-2.5-flash";
 
 // ========================================================
-// COMPONENTE: DROPDOWN DE BÚSQUEDA
+// COMPONENTE: DROPDOWN DE BÚSQUEDA (CORREGIDO)
 // ========================================================
 const SearchableDropdown = ({ options = [], value, onChange, placeholder, dark = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -74,7 +74,7 @@ const SearchableDropdown = ({ options = [], value, onChange, placeholder, dark =
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            selectedOption ? selectedOption.label : (value || placeholder)
+            selectedOption ? selectedOption.label : placeholder
           )}
         </div>
         <ChevronRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
@@ -104,13 +104,17 @@ const SearchableDropdown = ({ options = [], value, onChange, placeholder, dark =
 };
 
 // ========================================================
-// COMPONENTE: GESTOR DE LISTAS (MODAL) - UNIFIED
+// COMPONENTE: GESTOR DE LISTAS (MODAL) - FINAL VERSION
 // ========================================================
 const ListManagerModal = ({ title, items: initialItems, onSave, onClose }) => {
-    const [managedItems, setManagedItems] = useState(() => 
-        initialItems.map((name, index) => ({ id: `initial-${index}`, name, originalName: name }))
-    );
+    const [managedItems, setManagedItems] = useState([]);
     const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+      setManagedItems(
+        initialItems.map((name, index) => ({ id: `initial-${index}`, name, originalName: name }))
+      )
+    }, [initialItems]);
 
     const handleItemChange = (id, newName) => {
         setManagedItems(managedItems.map(item => item.id === id ? { ...item, name: newName } : item));
@@ -180,7 +184,7 @@ const ListManagerModal = ({ title, items: initialItems, onSave, onClose }) => {
 // ========================================================
 // APLICACIÓN PRINCIPAL
 // ========================================================
-const APP_VERSION = "1.6";
+const APP_VERSION = "1.9";
 
 export default function App() {
   const [proyectos, setProyectos] = useState([]);
@@ -192,9 +196,6 @@ export default function App() {
   const [activeProject, setActiveProject] = useState(null);
 
   const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const [aiStatus, setAiStatus] = useState("");
-  const [isDiagnosticOpen, setIsDiagnosticOpen] = useState(false);
-  const [lastError, setLastError] = useState(null);
 
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [autoFillTriggered, setAutoFillTriggered] = useState(false);
@@ -207,7 +208,7 @@ export default function App() {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [partForm, setPartForm] = useState({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
-  const [bomForm, setBomForm] = useState({ partId: '', quantity: 1, unitPrice: 0, proveedor: ''});
+  const [bomForm, setBomForm] = useState({ partId: '', quantity: 1, unitPrice: 0, proveedorId: ''});
   const [searchTerm, setSearchTerm] = useState('');
   const [bomSearchFilter, setBomSearchFilter] = useState('');
 
@@ -227,21 +228,27 @@ export default function App() {
     onSnapshot(collection(db, 'catalogo_maestro'), s => setCatalogo(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => (a.name || '').localeCompare(b.name || ''))));
     onSnapshot(collection(db, 'items_bom'), s => setBomItems(s.docs.map(d => ({ ...d.data(), id: d.id }))));
 
-    // Listen to managed list collections - UNIFIED LOGIC
-    const unsubCategories = onSnapshot(collection(db, 'categorias'), s => setManagedLists(prev => ({...prev, categories: s.docs.map(d => d.data()?.name).filter(Boolean).sort()})));
-    const unsubProviders = onSnapshot(collection(db, 'proveedores'), s => setManagedLists(prev => ({...prev, providers: s.docs.map(d => d.data()?.name).filter(Boolean).sort()})));
-    const unsubBrands = onSnapshot(collection(db, 'marcas'), s => setManagedLists(prev => ({...prev, brands: s.docs.map(d => d.data()?.name).filter(Boolean).sort()})));
+    const unsubCategories = onSnapshot(collection(db, 'categorias'), s => setManagedLists(prev => ({...prev, categories: s.docs.map(d => ({id: d.id, name: d.data()?.name})).filter(d => d.name).sort((a,b) => a.name.localeCompare(b.name))})));
+    const unsubProviders = onSnapshot(collection(db, 'proveedores'), s => setManagedLists(prev => ({...prev, providers: s.docs.map(d => ({id: d.id, name: d.data()?.name})).filter(d => d.name).sort((a,b) => a.name.localeCompare(b.name))})));
+    const unsubBrands = onSnapshot(collection(db, 'marcas'), s => setManagedLists(prev => ({...prev, brands: s.docs.map(d => ({id: d.id, name: d.data()?.name})).filter(d => d.name).sort((a,b) => a.name.localeCompare(b.name))})));
 
     return () => { unsubCategories(); unsubProviders(); unsubBrands(); };
   }, []);
 
-  const testConnection = async () => { /* ... no changes ... */ };
-  const handlePdfUpload = async (e) => { /* ... no changes ... */ };
+  const handlePdfUpload = (e) => { /* Placeholder */ };
 
   const handlePartSelection = (id) => {
-    if (!id) return setBomForm({...bomForm, partId: '', unitPrice: 0, proveedor: ''});
+    setBomSearchFilter('');
+    if (!id) return setBomForm({partId: '', quantity: 1, unitPrice: 0, proveedorId: ''});
     const p = catalogo.find(x => x.id === id);
-    setBomForm({...bomForm, partId: id, unitPrice: p?.lastPrice || 0, proveedor: p?.defaultProvider || ''});
+    if (!p) return;
+
+    let providerId = '';
+    if (p.defaultProvider) {
+      providerId = typeof p.defaultProvider === 'string' ? managedLists.providers.find(i => i.name === p.defaultProvider)?.id || '' : p.defaultProvider.id;
+    }
+
+    setBomForm({...bomForm, partId: id, unitPrice: p.lastPrice || 0, proveedorId: providerId });
     setAutoFillTriggered(true);
     setTimeout(() => setAutoFillTriggered(false), 600);
   };
@@ -251,7 +258,7 @@ export default function App() {
     if (!newProjectName.trim()) return;
     const data = { name: newProjectName, description: newProjectDesc, createdAt: new Date().toISOString() };
     if (editingProjectId) {
-        await updateDoc(doc(db, 'proyectos_bom', editingProjectId), { name: newProjectName, description: newProjectDesc });
+        await updateDoc(doc(db, 'proyectos_bom', editingProjectId), data);
     } else {
         await setDoc(doc(collection(db, 'proyectos_bom')), data);
     }
@@ -260,8 +267,17 @@ export default function App() {
 
   const handleSavePart = async (e) => {
     e.preventDefault();
-    if (!partForm.name || !partForm.partNumber) return alert("Nombre, P/N y Marca obligatorios.");
-    const data = { ...partForm, lastPrice: Number(partForm.lastPrice) || 0 };
+    if (!partForm.name || !partForm.partNumber) return alert("Nombre y P/N obligatorios.");
+    
+    const data = {
+        name: partForm.name,
+        partNumber: partForm.partNumber,
+        lastPrice: Number(partForm.lastPrice) || 0,
+        brand: partForm.brand ? doc(db, 'marcas', partForm.brand) : null,
+        category: partForm.category ? doc(db, 'categorias', partForm.category) : null,
+        defaultProvider: partForm.defaultProvider ? doc(db, 'proveedores', partForm.defaultProvider) : null,
+    };
+
     if (editingCatalogId) {
         await updateDoc(doc(db, 'catalogo_maestro', editingCatalogId), data);
     } else {
@@ -273,27 +289,29 @@ export default function App() {
   
   const handleSaveManagedList = async ({ type, data }) => {
     const { renames, deleted, added } = data;
-    
     const batch = writeBatch(db);
     const masterCatalogRef = collection(db, 'catalogo_maestro');
     
-    let collectionName = '';
-    let fieldName = '';
-
+    let collectionName = '', fieldName = '';
     if (type === 'category') { collectionName = 'categorias'; fieldName = 'category'; }
     else if (type === 'provider') { collectionName = 'proveedores'; fieldName = 'defaultProvider'; }
     else if (type === 'brand') { collectionName = 'marcas'; fieldName = 'brand'; }
     else return;
 
-    // --- Sync Master List Collection (UNIFIED LOGIC) ---
     const collectionRef = collection(db, collectionName);
     const listQuerySnapshot = await getDocs(collectionRef);
     const existingDocs = listQuerySnapshot.docs.map(d => ({ id: d.id, name: d.data()?.name })).filter(d => d.name);
 
-    deleted.forEach(name => {
+    for (const name of deleted) {
         const docToDelete = existingDocs.find(d => d.name === name);
-        if (docToDelete) batch.delete(doc(collectionRef, docToDelete.id));
-    });
+        if (docToDelete) {
+            const refToDelete = doc(db, collectionName, docToDelete.id);
+            batch.delete(refToDelete);
+            const q = query(masterCatalogRef, where(fieldName, "==", refToDelete));
+            const snapshot = await getDocs(q);
+            snapshot.forEach(docToUpdate => batch.update(docToUpdate.ref, { [fieldName]: null }));
+        }
+    }
 
     renames.forEach(({ oldName, newName }) => {
         const docToUpdate = existingDocs.find(d => d.name === oldName);
@@ -302,55 +320,69 @@ export default function App() {
 
     added.forEach(name => {
       if (!existingDocs.some(d => d.name.toLowerCase() === name.toLowerCase())) {
-        const newDocRef = doc(collectionRef);
-        batch.set(newDocRef, { name });
+        batch.set(doc(collectionRef), { name });
       }
     });
     
-    // --- Update references in catalogo_maestro ---
-    if ((renames.length > 0 || deleted.length > 0) && fieldName) {
-        const catalogSnapshot = await getDocs(masterCatalogRef);
-        catalogSnapshot.docs.forEach(catalogDoc => {
-            const part = catalogDoc.data();
-            const currentValue = part[fieldName];
-            if (currentValue && (deleted.includes(currentValue) || renames.some(r => r.oldName === currentValue))) {
-                const renameAction = renames.find(r => r.oldName === currentValue);
-                batch.update(catalogDoc.ref, { [fieldName]: renameAction ? renameAction.newName : '' }); 
-            }
-        });
-    }
-
     await batch.commit();
 
-    // --- Update local form if needed ---
-    if (fieldName) {
-        const affectedOldValues = [...renames.map(r => r.oldName), ...deleted];
-        if (affectedOldValues.includes(partForm[fieldName])) {
-            const rename = renames.find(r => r.oldName === partForm[fieldName]);
-            setPartForm(prev => ({...prev, [fieldName]: rename ? rename.newName : ''}));
-        }
+    const list = managedLists[type === 'category' ? 'categories' : type + 's'] || [];
+    const currentFormValueId = partForm[fieldName];
+    const currentFormValueName = list.find(item => item.id === currentFormValueId)?.name;
+    if ([...renames.map(r => r.oldName), ...deleted].includes(currentFormValueName)) {
+        setPartForm(prev => ({...prev, [fieldName]: ''}));
     }
   };
 
-  const allUniqueProviders = [...new Set([...managedLists.providers, ...catalogo.map(c => c.defaultProvider).filter(Boolean)])].map(p => ({ value: p, label: p }));
-  const uniqueCategories = [...new Set([...managedLists.categories, ...catalogo.map(c => c.category).filter(Boolean)])].map(c => ({ value: c, label: c }));
-  const uniqueBrands = [...new Set([...managedLists.brands, ...catalogo.map(c => c.brand).filter(Boolean)])].map(b => ({ value: b, label: b }));
+  const handleEditClick = (item) => {
+    const findIdByName = (list, name) => list.find(i => i.name === name)?.id || '';
+
+    const brandId = item.brand ? (typeof item.brand === 'string' ? findIdByName(managedLists.brands, item.brand) : item.brand.id) : '';
+    const categoryId = item.category ? (typeof item.category === 'string' ? findIdByName(managedLists.categories, item.category) : item.category.id) : '';
+    const providerId = item.defaultProvider ? (typeof item.defaultProvider === 'string' ? findIdByName(managedLists.providers, item.defaultProvider) : item.defaultProvider.id) : '';
+
+    setEditingCatalogId(item.id);
+    setPartForm({
+        name: item.name || '',
+        partNumber: item.partNumber || '',
+        lastPrice: item.lastPrice || 0,
+        brand: brandId,
+        category: categoryId,
+        defaultProvider: providerId
+    });
+    window.scrollTo({top:0, behavior:'smooth'});
+  };
+
+  const brandOptions = managedLists.brands.map(b => ({ value: b.id, label: b.name }));
+  const categoryOptions = managedLists.categories.map(c => ({ value: c.id, label: c.name }));
+  const providerOptions = managedLists.providers.map(p => ({ value: p.id, label: p.name }));
+
+  const selectedPartForBom = bomForm.partId ? catalogo.find(p => p.id === bomForm.partId) : null;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20 overflow-x-hidden">
       
-      {isDiagnosticOpen && ( <div>{/*...*/}</div> )}
-
       {listManager.isOpen && (
         <ListManagerModal 
             title={listManager.title}
-            items={managedLists[listManager.type + 's'] || []} // e.g., managedLists.categories
+            items={managedLists[listManager.type === 'category' ? 'categories' : listManager.type + 's']?.map(i => i.name) || []}
             onClose={() => setListManager({ isOpen: false, type: null, title: '' })}
             onSave={(data) => handleSaveManagedList({ type: listManager.type, data })}
         />
       )}
 
-      {confirmDelete.isOpen && ( <div>{/*...*/}</div> )}
+      {confirmDelete.isOpen && (
+         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 text-center animate-in zoom-in duration-200">
+                <h2 className="font-black text-xl mb-2">{confirmDelete.title}</h2>
+                <p className="text-slate-500 mb-6">{confirmDelete.message}</p>
+                <div className="flex gap-3">
+                    <button onClick={() => setConfirmDelete({isOpen: false, onConfirm: null})} className="flex-1 p-3.5 bg-slate-100 text-slate-600 rounded-xl font-bold">Cancelar</button>
+                    <button onClick={() => { confirmDelete.onConfirm(); setConfirmDelete({isOpen: false, onConfirm: null}); }} className="flex-1 p-3.5 bg-red-500 text-white rounded-xl font-black">Confirmar</button>
+                </div>
+            </div>
+        </div>
+      )}
 
       <header className="bg-slate-900 text-white p-4 shadow-xl flex items-center justify-between sticky top-0 z-[100]">
         <div className="flex items-center space-x-3">
@@ -360,7 +392,6 @@ export default function App() {
                 <h1 className="text-lg font-black tracking-tighter leading-none">AutoBOM Pro</h1>
                 <span className="text-[10px] font-mono bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">v{APP_VERSION}</span>
             </div>
-            <button onClick={testConnection} className="text-[9px] font-bold text-yellow-400 flex items-center hover:text-white transition-colors mt-1 bg-yellow-400/10 px-2 py-0.5 rounded-full"><Activity className="w-3 h-3 mr-1"/> Test API Gemini</button>
           </div>
         </div>
         <nav className="flex space-x-1 bg-slate-800 p-1 rounded-xl">
@@ -413,13 +444,6 @@ export default function App() {
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">{activeProject.name}</h2>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                    <div className="relative flex-1">
-                        <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} accept=".pdf" className="hidden" />
-                        <button onClick={() => pdfInputRef.current.click()} disabled={isProcessingAI} className="w-full bg-slate-900 text-white px-6 py-4 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all disabled:bg-slate-400 min-w-[200px]">
-                        {isProcessingAI ? <Loader2 className="w-5 h-5 animate-spin mr-2"/> : <Sparkles className="w-5 h-5 mr-2 text-yellow-400 fill-yellow-400"/>}
-                        {isProcessingAI ? "Procesando..." : 'Importar PDF (IA)'}
-                        </button>
-                    </div>
                     <div className="bg-green-50 border border-green-100 px-8 py-3 rounded-2xl text-right flex-1 md:flex-none">
                         <div className="text-[10px] font-black text-green-800 uppercase tracking-widest">Inversión Estimada</div>
                         <div className="text-3xl font-black text-green-700 tracking-tighter">${(activeBomItems || []).reduce((s,i) => s+(i.totalPrice||0),0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
@@ -442,6 +466,23 @@ export default function App() {
                                 return searchStr.includes(bomSearchFilter.toLowerCase());
                             }).map(c => ({ value: c.id, label: c.name, subLabel: `${c.partNumber} • $${c.lastPrice||0}` }))} value={bomForm.partId} onChange={handlePartSelection} placeholder="📌 Selecciona pieza..." />
                             
+                            {selectedPartForBom && (
+                                <div className="p-3 bg-indigo-950/40 rounded-xl mt-1 space-y-2 border border-indigo-800/50">
+                                    <div className="flex items-center flex-wrap gap-2">
+                                        { (() => {
+                                            const brandName = selectedPartForBom.brand ? (typeof selectedPartForBom.brand === 'string' ? selectedPartForBom.brand : managedLists.brands.find(b => b.id === selectedPartForBom.brand.id)?.name) : '';
+                                            const categoryName = selectedPartForBom.category ? (typeof selectedPartForBom.category === 'string' ? selectedPartForBom.category : managedLists.categories.find(c => c.id === selectedPartForBom.category.id)?.name) : '';
+                                            return (
+                                                <>
+                                                    {brandName && <div className="flex items-center text-[10px] font-black text-gray-300 bg-gray-600/50 px-2 py-1 rounded-full w-max border border-gray-500/50 uppercase tracking-tight"><Tag className="w-3 h-3 mr-1"/>{brandName}</div>}
+                                                    {categoryName && <div className="flex items-center text-[10px] font-black text-purple-300 bg-purple-600/30 px-2 py-1 rounded-full w-max border border-purple-500/50 uppercase tracking-tight"><Tag className="w-3 h-3 mr-1"/>{categoryName}</div>}
+                                                </>
+                                            )
+                                        })() }
+                                    </div>
+                                </div>
+                            )}
+
                             <div className={`grid grid-cols-2 gap-3 transition-all duration-500 ${autoFillTriggered ? 'ring-2 ring-green-400 rounded-xl p-1 bg-green-900/20' : ''}`}>
                                 <div className="flex flex-col">
                                     <span className="text-[9px] font-black text-indigo-400 uppercase ml-1 mb-1">Cant.</span>
@@ -456,17 +497,26 @@ export default function App() {
                                 </div>
                             </div>
 
-                            <SearchableDropdown dark options={allUniqueProviders} value={bomForm.proveedor} onChange={val => setBomForm({...bomForm, proveedor: val})} placeholder="🚚 Distribuidor..." />
+                            <SearchableDropdown dark options={providerOptions} value={bomForm.proveedorId} onChange={val => setBomForm({...bomForm, proveedorId: val})} placeholder="🚚 Distribuidor..." />
 
                             <button onClick={async () => {
                                 if (!bomForm.partId) return alert("Selecciona una pieza");
                                 const part = catalogo.find(p => p.id === bomForm.partId);
                                 const batch = writeBatch(db);
                                 const bomRef = doc(collection(db, 'items_bom'));
-                                batch.set(bomRef, { ...part, ...bomForm, projectId: activeProject.id, partId: part.id, quantity: Number(bomForm.quantity), unitPrice: Number(bomForm.unitPrice), totalPrice: Number(bomForm.quantity) * Number(bomForm.unitPrice), status: 'Requerido', addedAt: new Date().toISOString() });
-                                batch.update(doc(db, 'catalogo_maestro', part.id), { lastPrice: Number(bomForm.unitPrice), defaultProvider: bomForm.proveedor });
+                                batch.set(bomRef, { 
+                                    projectId: activeProject.id, 
+                                    masterPartRef: doc(db, 'catalogo_maestro', part.id),
+                                    quantity: Number(bomForm.quantity), 
+                                    unitPrice: Number(bomForm.unitPrice), 
+                                    totalPrice: Number(bomForm.quantity) * Number(bomForm.unitPrice), 
+                                    proveedor: bomForm.proveedorId ? doc(db, 'proveedores', bomForm.proveedorId) : null,
+                                    status: 'Requerido', 
+                                    addedAt: new Date().toISOString() 
+                                });
+                                batch.update(doc(db, 'catalogo_maestro', part.id), { lastPrice: Number(bomForm.unitPrice), defaultProvider: bomForm.proveedorId ? doc(db, 'proveedores', bomForm.proveedorId) : null });
                                 await batch.commit();
-                                setBomForm({ partId: '', quantity: 1, unitPrice: 0, proveedor: '' });
+                                setBomForm({ partId: '', quantity: 1, unitPrice: 0, proveedorId: '' });
                             }} className="w-full bg-white text-indigo-900 p-4 rounded-2xl font-black mt-4 shadow-lg active:scale-95 transition-all flex items-center justify-center">
                             <Plus className="w-5 h-5 mr-2"/> Agregar al BOM
                             </button>
@@ -481,23 +531,53 @@ export default function App() {
                                 <tr><th className="p-5">Cant</th><th className="p-5">Descripción del Ítem</th><th className="p-5 text-right">Costo</th><th className="p-5 text-center">⚙️</th></tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {(activeBomItems || []).map(item => (
+                                {(activeBomItems || []).map(item => {
+                                    let details = {};
+                                    let providerName = '';
+
+                                    if (item.masterPartRef) {
+                                        const masterPart = catalogo.find(p => p.id === item.masterPartRef.id);
+                                        if (!masterPart) return <tr key={item.id}><td colSpan="4" className="p-4 text-center text-slate-400">Ítem obsoleto (eliminado del catálogo)</td></tr>;
+                                        
+                                        details = {
+                                            name: masterPart.name,
+                                            partNumber: masterPart.partNumber,
+                                            brandName: managedLists.brands.find(b => b.id === masterPart.brand?.id)?.name || '',
+                                            categoryName: managedLists.categories.find(c => c.id === masterPart.category?.id)?.name || ''
+                                        };
+                                        providerName = managedLists.providers.find(p => p.id === item.proveedor?.id)?.name || '';
+                                    } else {
+                                        // Fallback for old data structure
+                                        details = {
+                                            name: item.name,
+                                            partNumber: item.partNumber,
+                                            brandName: item.brand ? (typeof item.brand === 'string' ? item.brand : managedLists.brands.find(b => b.id === item.brand.id)?.name) : '',
+                                            categoryName: item.category ? (typeof item.category === 'string' ? item.category : managedLists.categories.find(c => c.id === item.category.id)?.name) : ''
+                                        };
+                                        providerName = item.proveedor ? (typeof item.proveedor === 'string' ? item.proveedor : managedLists.providers.find(p => p.id === item.proveedor.id)?.name) : '';
+                                    }
+
+                                  return (
                                 <tr key={item.id} className="hover:bg-indigo-50/20 group transition-colors">
                                     <td className="p-5 font-black text-lg text-slate-700">{item.quantity}</td>
                                     <td className="p-5">
-                                    <div className="font-bold text-slate-900 leading-tight">{item.name || 'Sin nombre'}</div>
-                                    <div className="text-[10px] font-mono text-slate-400 mt-1">{item.partNumber || 'S/N'}</div>
-                                    {item.proveedor && <div className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded w-max mt-2 border border-indigo-100 uppercase tracking-tighter">Prov: {item.proveedor}</div>}
+                                      <div className="font-bold text-slate-900 leading-tight">{details.name || 'Sin nombre'}</div>
+                                      <div className="text-[10px] font-mono text-slate-400 mt-1">{details.partNumber || 'S/N'}</div>
+                                      <div className="flex items-center flex-wrap gap-2 mt-2">
+                                        {details.brandName && <div className="flex items-center text-[9px] font-black text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full w-max border border-gray-200 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{details.brandName}</div>}
+                                        {details.categoryName && <div className="flex items-center text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full w-max border border-purple-100 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{details.categoryName}</div>}
+                                        {providerName && <div className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded w-max mt-2 border border-indigo-100 uppercase tracking-tighter">Prov: {providerName}</div>}
+                                      </div>
                                     </td>
                                     <td className="p-5 text-right">
                                         <div className="font-black text-slate-900 text-lg">${(item.totalPrice||0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
                                         <div className="text-[10px] text-slate-400">${item.unitPrice}/u</div>
                                     </td>
                                     <td className="p-5 text-center">
-                                    <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${item.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
+                                    <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
                                     </td>
                                 </tr>
-                                ))}
+                                )})}
                             </tbody>
                             </table>
                         </div>
@@ -517,14 +597,14 @@ export default function App() {
                   
                   <div className="flex items-center gap-2">
                       <div className="flex-grow">
-                           <SearchableDropdown options={uniqueBrands} value={partForm.brand} onChange={val => setPartForm({...partForm, brand: val})} placeholder="🏭 Marca..."/>
+                           <SearchableDropdown options={brandOptions} value={partForm.brand} onChange={val => setPartForm({...partForm, brand: val})} placeholder="🏭 Marca..."/>
                       </div>
                       <button type="button" onClick={() => setListManager({ isOpen: true, type: 'brand', title: 'Gestionar Marcas'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
                   </div>
 
                    <div className="flex items-center gap-2">
                       <div className="flex-grow">
-                          <SearchableDropdown options={uniqueCategories} value={partForm.category} onChange={val => setPartForm({...partForm, category: val})} placeholder="🏷️ Categoría..."/>
+                          <SearchableDropdown options={categoryOptions} value={partForm.category} onChange={val => setPartForm({...partForm, category: val})} placeholder="🏷️ Categoría..."/>
                       </div>
                       <button type="button" onClick={() => setListManager({ isOpen: true, type: 'category', title: 'Gestionar Categorías'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
                   </div>
@@ -533,7 +613,7 @@ export default function App() {
                     <input type="number" step="0.01" value={partForm.lastPrice} onChange={e => setPartForm({...partForm, lastPrice: e.target.value})} placeholder="Precio Estimado $" className="w-full p-3.5 border border-green-100 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-green-500" />
                     <div className="flex items-center gap-2">
                         <div className="flex-grow">
-                            <SearchableDropdown options={allUniqueProviders} value={partForm.defaultProvider} onChange={val => setPartForm({...partForm, defaultProvider: val})} placeholder="🚚 Proveedor..."/>
+                            <SearchableDropdown options={providerOptions} value={partForm.defaultProvider} onChange={val => setPartForm({...partForm, defaultProvider: val})} placeholder="🚚 Proveedor..."/>
                         </div>
                         <button type="button" onClick={() => setListManager({ isOpen: true, type: 'provider', title: 'Gestionar Proveedores'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
                     </div>
@@ -550,7 +630,7 @@ export default function App() {
             <div className="lg:col-span-2 space-y-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Filtrar por nombre, P/N, marca, categoría..." className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Filtrar por nombre, P/N, marca..." className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
                 <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden min-h-[400px]">
                     <table className="w-full text-left text-sm">
@@ -558,30 +638,38 @@ export default function App() {
                         <tr><th className="p-5">Pieza</th><th className="p-5 text-right">Precio Base</th><th className="p-5 text-center">⚙️</th></tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                        {(catalogo || []).filter(p => {
-                            const s = searchTerm.toLowerCase();
-                            return (p.name || '').toLowerCase().includes(s) || 
-                                   (p.partNumber || '').toLowerCase().includes(s) || 
-                                   (p.defaultProvider || '').toLowerCase().includes(s) || 
-                                   (p.category || '').toLowerCase().includes(s) ||
-                                   (p.brand || '').toLowerCase().includes(s);
-                        }).map(item => (
-                        <tr key={item.id} className="hover:bg-indigo-50/40 group transition-colors">
-                            <td className="p-5">
-                            <div className="font-bold text-slate-800 text-base leading-tight">{item.name || 'Sin nombre'}</div>
-                            <div className="text-[10px] font-mono text-slate-500 mt-1">{item.partNumber}</div>
-                            <div className="flex items-center gap-2 mt-2">
-                                {item.brand && <div className="flex items-center text-[9px] font-black text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full w-max border border-gray-200 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{item.brand}</div>}
-                                {item.category && <div className="flex items-center text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full w-max border border-purple-100 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{item.category}</div>}
-                            </div>
-                            </td>
-                            <td className="p-5 text-right font-black text-green-700 text-lg">${(item.lastPrice || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                            <td className="p-5 text-center flex justify-center space-x-1">
-                            <button onClick={(e) => { e.stopPropagation(); setEditingCatalogId(item.id); setPartForm({name: item.name || '', partNumber: item.partNumber || '', lastPrice: item.lastPrice || 0, defaultProvider: item.defaultProvider || '', category: item.category || '', brand: item.brand || ''}); window.scrollTo({top:0, behavior:'smooth'}); }} className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg"><Pencil className="w-4 h-4"/></button>
-                            <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) });}} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4"/></button>
-                            </td>
-                        </tr>
-                        ))}
+                        {catalogo.map(item => {
+                             const brandName = item.brand ? (typeof item.brand === 'string' ? item.brand : managedLists.brands.find(b => b.id === item.brand.id)?.name) : '';
+                             const categoryName = item.category ? (typeof item.category === 'string' ? item.category : managedLists.categories.find(c => c.id === item.category.id)?.name) : '';
+
+                             const searchMatch = () => {
+                                if (!searchTerm) return true;
+                                const s = searchTerm.toLowerCase();
+                                return (item.name || '').toLowerCase().includes(s) || 
+                                       (item.partNumber || '').toLowerCase().includes(s) || 
+                                       (brandName || '').toLowerCase().includes(s) || 
+                                       (categoryName || '').toLowerCase().includes(s);
+                             }
+                             if (!searchMatch()) return null;
+
+                             return (
+                                <tr key={item.id} className="hover:bg-indigo-50/40 group transition-colors">
+                                    <td className="p-5">
+                                    <div className="font-bold text-slate-800 text-base leading-tight">{item.name || 'Sin nombre'}</div>
+                                    <div className="text-[10px] font-mono text-slate-500 mt-1">{item.partNumber}</div>
+                                    <div className="flex items-center flex-wrap gap-2 mt-2">
+                                        {brandName && <div className="flex items-center text-[9px] font-black text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full w-max border border-gray-200 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{brandName}</div>}
+                                        {categoryName && <div className="flex items-center text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full w-max border border-purple-100 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{categoryName}</div>}
+                                    </div>
+                                    </td>
+                                    <td className="p-5 text-right font-black text-green-700 text-lg">${(item.lastPrice || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                                    <td className="p-5 text-center flex justify-center space-x-1">
+                                    <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg"><Pencil className="w-4 h-4"/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) });}} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4"/></button>
+                                    </td>
+                                </tr>
+                             );
+                        })}
                     </tbody>
                     </table>
                 </div>
