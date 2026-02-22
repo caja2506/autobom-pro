@@ -260,8 +260,6 @@ export default function App() {
     } catch (err) {
       setLastError(err.message);
       setAiStatus("❌ ERROR");
-    } finally {
-      e.target.value = "";
     }
   };
 
@@ -360,7 +358,7 @@ export default function App() {
         </nav>
       </header>
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8">
+      <main className="w-full p-4 md:p-8">
         
         {/* VISTA 1: PROYECTOS */}
         {activeTab === 'proyectos' && (
