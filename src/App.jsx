@@ -134,6 +134,12 @@ export default function App() {
   const [bomSearchFilter, setBomSearchFilter] = useState('');
 
   const pdfInputRef = useRef(null);
+  
+  const activeBomItems = activeProject
+    ? bomItems
+        .filter(i => i.projectId === activeProject.id)
+        .sort((a,b) => new Date(a.addedAt) - new Date(b.addedAt))
+    : [];
 
   // Carga inicial de librerías y Firebase
   useEffect(() => {
@@ -144,12 +150,8 @@ export default function App() {
 
     onSnapshot(collection(db, 'proyectos_bom'), s => setProyectos(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))));
     onSnapshot(collection(db, 'catalogo_maestro'), s => setCatalogo(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => (a.name || '').localeCompare(b.name || ''))));
+    onSnapshot(collection(db, 'items_bom'), s => setBomItems(s.docs.map(d => ({ ...d.data(), id: d.id }))));
   }, []);
-
-  useEffect(() => {
-    if (!activeProject) return;
-    return onSnapshot(collection(db, 'items_bom'), s => setBomItems(s.docs.map(d => ({ ...d.data(), id: d.id })).filter(i => i.projectId === activeProject.id).sort((a,b) => new Date(a.addedAt) - new Date(b.addedAt))));
-  }, [activeProject]);
 
   // --- FUNCIÓN DE TEST BÁSICA Y DIRECTA ---
   const testConnection = async () => {
@@ -368,7 +370,12 @@ export default function App() {
               <button onClick={() => {setEditingProjectId(null); setNewProjectName(''); setNewProjectDesc(''); setIsProjectModalOpen(true);}} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg flex items-center justify-center active:scale-95 transition-transform"><Plus className="mr-2"/> Nuevo Proyecto</button>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {(proyectos || []).map(p => (
+              {(proyectos || []).map(p => {
+                const totalProyecto = bomItems
+                  .filter(item => item.projectId === p.id)
+                  .reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+
+                return (
                 <div key={p.id} onClick={() => {setActiveProject(p); setActiveTab('bom');}} className="bg-white p-6 rounded-3xl border border-slate-200 hover:border-indigo-400 cursor-pointer shadow-sm relative group transition-all h-52 flex flex-col justify-between overflow-hidden">
                   <div className="absolute top-0 right-0 w-12 h-12 bg-indigo-50 rounded-bl-full opacity-40"></div>
                   <div>
@@ -377,14 +384,20 @@ export default function App() {
                   </div>
                   <div className="flex justify-between items-center border-t pt-4 border-slate-50">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{new Date(p.createdAt).toLocaleDateString()}</span>
-                    <ChevronRight className="text-indigo-500 w-5 h-5" />
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center font-bold text-green-600 text-sm">
+                            <DollarSign className="w-4 h-4 mr-1"/>
+                            {totalProyecto.toLocaleString('en-US', {minimumFractionDigits: 2})}
+                        </div>
+                        <ChevronRight className="text-indigo-500 w-5 h-5" />
+                    </div>
                   </div>
                   <div className="absolute top-4 right-4 flex space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => {e.stopPropagation(); setEditingProjectId(p.id); setNewProjectName(p.name); setNewProjectDesc(p.description); setIsProjectModalOpen(true);}} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100"><Pencil className="w-4 h-4"/></button>
                     <button onClick={(e) => {e.stopPropagation(); setConfirmDelete({ isOpen: true, title: '¿Borrar proyecto?', message: `Se borrarán todos los datos de "${p.name}".`, onConfirm: () => deleteDoc(doc(db, 'proyectos_bom', p.id)) });}} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100"><Trash2 className="w-4 h-4"/></button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
         )}
@@ -407,7 +420,7 @@ export default function App() {
                   </div>
                   <div className="bg-green-50 border border-green-100 px-8 py-3 rounded-2xl text-right flex-1 md:flex-none">
                     <div className="text-[10px] font-black text-green-800 uppercase tracking-widest">Inversión Estimada</div>
-                    <div className="text-3xl font-black text-green-700 tracking-tighter">${(bomItems || []).reduce((s,i) => s+(i.totalPrice||0),0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                    <div className="text-3xl font-black text-green-700 tracking-tighter">${(activeBomItems || []).reduce((s,i) => s+(i.totalPrice||0),0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
                   </div>
                </div>
             </div>
@@ -466,7 +479,7 @@ export default function App() {
                         <tr><th className="p-5">Cant</th><th className="p-5">Descripción del Ítem</th><th className="p-5 text-right">Costo</th><th className="p-5 text-center">⚙️</th></tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {(bomItems || []).map(item => (
+                        {(activeBomItems || []).map(item => (
                           <tr key={item.id} className="hover:bg-indigo-50/20 group transition-colors">
                             <td className="p-5 font-black text-lg text-slate-700">{item.quantity}</td>
                             <td className="p-5">
