@@ -104,6 +104,8 @@ const SearchableDropdown = ({ options = [], value, onChange, placeholder, dark =
 // ========================================================
 // APLICACIÓN PRINCIPAL
 // ========================================================
+const APP_VERSION = "1.1";
+
 export default function App() {
   const [proyectos, setProyectos] = useState([]);
   const [catalogo, setCatalogo] = useState([]);
@@ -348,7 +350,10 @@ export default function App() {
         <div className="flex items-center space-x-3">
           <BrainCircuit className="text-indigo-400 w-8 h-8" />
           <div className="flex flex-col">
-            <h1 className="text-lg font-black tracking-tighter leading-none">AutoBOM Pro</h1>
+            <div className="flex items-center gap-2">
+                <h1 className="text-lg font-black tracking-tighter leading-none">AutoBOM Pro</h1>
+                <span className="text-[10px] font-mono bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">v{APP_VERSION}</span>
+            </div>
             <button onClick={testConnection} className="text-[9px] font-bold text-yellow-400 flex items-center hover:text-white transition-colors mt-1 bg-yellow-400/10 px-2 py-0.5 rounded-full"><Activity className="w-3 h-3 mr-1"/> Test API Gemini</button>
           </div>
         </div>
