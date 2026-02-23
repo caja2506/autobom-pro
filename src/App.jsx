@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   FolderGit2, Database, Search, Plus, Trash2, 
   ChevronRight, DollarSign, ArrowLeft, 
   PackagePlus, X, Pencil, BrainCircuit, 
-  Loader2, Sparkles, Filter, Zap, Activity, Tag, AlertCircle
+  Loader2, Sparkles, Filter, Zap, Activity, Tag, AlertCircle, ShoppingCart, Check,
+  Settings2, Edit3
 } from 'lucide-react';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
@@ -30,19 +31,17 @@ const XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.m
 
 // --- API GEMINI CONFIG ---
 const API_KEY = "AIzaSyAgG7jwwxHRqDW2IaPRImr6GK-SqjFKDsQ";
-const MODEL_NAME = "gemini-2.5-flash";
+const MODEL_NAME = "gemini-1.5-flash";
 
 // ========================================================
-// COMPONENTE: DROPDOWN DE BÚSQUEDA
+// COMPONENTE: DROPDOWN DE BÚSQUEDA (SOPORTA MULTI-SELECCIÓN)
 // ========================================================
-const SearchableDropdown = ({ options, value, onChange, placeholder, dark = false }) => {
+const SearchableDropdown = ({ options, value, onChange, placeholder, dark = false, compact = false, multiple = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
   const wrapperRef = useRef(null);
 
   const safeOptions = Array.isArray(options) ? options : [];
-
-  const selectedOption = safeOptions.find(o => o.value === value);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -63,10 +62,37 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, dark = fals
       return label.toLowerCase().includes(lowerCaseSearch) || subLabel.toLowerCase().includes(lowerCaseSearch);
   });
 
+  const getDisplayLabel = () => {
+      if (multiple) {
+          if (!Array.isArray(value) || value.length === 0) return placeholder;
+          if (value.length === 1) return safeOptions.find(o => o.value === value[0])?.label || placeholder;
+          return `${value.length} seleccionados`;
+      } else {
+          const selected = safeOptions.find(o => o.value === value);
+          return selected ? selected.label : placeholder;
+      }
+  };
+
+  const handleSelect = (itemValue, e) => {
+      e.stopPropagation();
+      if (multiple) {
+          const currentValues = Array.isArray(value) ? value : [];
+          const newValues = currentValues.includes(itemValue) 
+              ? currentValues.filter(v => v !== itemValue) 
+              : [...currentValues, itemValue];
+          onChange(newValues);
+          // Keep open for multiple selection
+      } else {
+          onChange(itemValue);
+          setSearch('');
+          setIsOpen(false);
+      }
+  };
+
   return (
     <div ref={wrapperRef} className="relative w-full">
       <div 
-        className={`p-3 rounded-xl text-sm flex items-center justify-between cursor-pointer border transition-all ${dark ? 'bg-indigo-800 border-indigo-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
+        className={`${compact ? 'p-2 text-xs' : 'p-3 text-sm'} rounded-xl flex items-center justify-between cursor-pointer border transition-all ${dark ? 'bg-indigo-800 border-indigo-700 text-white' : 'bg-slate-50 border-slate-200 text-slate-800'}`}
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex-1 truncate font-bold">
@@ -80,7 +106,7 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, dark = fals
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            selectedOption ? selectedOption.label : placeholder
+            getDisplayLabel()
           )}
         </div>
         <ChevronRight className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
@@ -89,16 +115,25 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, dark = fals
       {isOpen && (
         <div className={`absolute z-[100] w-full mt-2 border rounded-2xl shadow-2xl max-h-64 overflow-y-auto ${dark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
           <ul className={`divide-y ${dark ? 'divide-slate-800' : 'divide-slate-50'}`}>
-            {filtered.slice(0, 50).map((item) => (
-              <li
-                key={item.value}
-                onClick={() => { onChange(item.value); setSearch(''); setIsOpen(false); }}
-                className={`p-3.5 cursor-pointer flex flex-col ${value === item.value ? (dark ? 'bg-indigo-800' : 'bg-indigo-50 border-l-4 border-indigo-500') : (dark ? 'hover:bg-indigo-900' : 'hover:bg-indigo-50')}`}
-              >
-                <span className={`font-bold text-sm ${dark ? 'text-white' : 'text-slate-800'}`}>{item.label}</span>
-                {item.subLabel && <span className={`text-[10px] mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-400 font-mono'}`}>{item.subLabel}</span>}
-              </li>
-            ))}
+            {filtered.slice(0, 50).map((item) => {
+              const isSelected = multiple 
+                  ? (Array.isArray(value) && value.includes(item.value))
+                  : value === item.value;
+
+              return (
+                <li
+                  key={item.value}
+                  onClick={(e) => handleSelect(item.value, e)}
+                  className={`p-3.5 cursor-pointer flex flex-col ${isSelected ? (dark ? 'bg-indigo-800' : 'bg-indigo-50 border-l-4 border-indigo-500') : (dark ? 'hover:bg-indigo-900' : 'hover:bg-indigo-50')}`}
+                >
+                  <div className="flex items-center justify-between">
+                      <span className={`font-bold text-sm ${dark ? 'text-white' : 'text-slate-800'}`}>{item.label}</span>
+                      {multiple && isSelected && <Check className="w-4 h-4 text-indigo-600" />}
+                  </div>
+                  {item.subLabel && <span className={`text-[10px] mt-0.5 ${dark ? 'text-slate-400' : 'text-slate-400 font-mono'}`}>{item.subLabel}</span>}
+                </li>
+              );
+            })}
             {filtered.length === 0 && (
                 <li className={`p-4 text-xs text-center ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Sin resultados</li>
             )}
@@ -108,6 +143,75 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, dark = fals
     </div>
   );
 };
+
+// ========================================================
+// COMPONENTE: POPUP DE FILTROS
+// ========================================================
+const FilterPopover = ({ filters, setFilters, options }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const activeFiltersCount = (filters.brand?.length || 0) + (filters.category?.length || 0) + (filters.provider?.length || 0);
+
+  return (
+    <div className="relative z-20" ref={wrapperRef}>
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isOpen || activeFiltersCount > 0 ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+      >
+        <Filter className="w-4 h-4" />
+        <span className="font-bold text-sm hidden sm:inline">Filtros</span>
+        {activeFiltersCount > 0 && (
+            <span className="bg-indigo-600 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full ml-1">{activeFiltersCount}</span>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+            <div className="flex justify-between items-center mb-3">
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Filtrar por...</h3>
+                <button onClick={() => setIsOpen(false)}><X className="w-4 h-4 text-slate-400 hover:text-slate-600"/></button>
+            </div>
+            <div className="space-y-3">
+                <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Marcas</span>
+                    <SearchableDropdown compact multiple options={options.brands} value={filters.brand} onChange={val => setFilters({...filters, brand: val})} placeholder="Todas" />
+                </div>
+                <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Categorías</span>
+                    <SearchableDropdown compact multiple options={options.categories} value={filters.category} onChange={val => setFilters({...filters, category: val})} placeholder="Todas" />
+                </div>
+                <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase ml-1">Proveedores</span>
+                    <SearchableDropdown compact multiple options={options.providers} value={filters.provider} onChange={val => setFilters({...filters, provider: val})} placeholder="Todos" />
+                </div>
+                
+                {activeFiltersCount > 0 && (
+                    <button 
+                        onClick={() => {
+                            setFilters({...filters, brand: [], category: [], provider: []});
+                        }}
+                        className="w-full py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg mt-2 flex items-center justify-center"
+                    >
+                        <Trash2 className="w-3 h-3 mr-1"/> Limpiar Filtros
+                    </button>
+                )}
+            </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ========================================================
 // COMPONENTE: GESTOR DE LISTAS (MODAL)
@@ -187,9 +291,224 @@ const ListManagerModal = ({ title, items: initialItems, onSave, onClose }) => {
 };
 
 // ========================================================
+// COMPONENTE: MODAL DE EDICIÓN DE ÍTEM DE BOM
+// ========================================================
+const BomItemEditModal = ({ item, onClose, onSave }) => {
+    const [formData, setFormData] = useState({ quantity: 0, unitPrice: 0 });
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (item) {
+            setFormData({
+                quantity: item.quantity || 1,
+                unitPrice: item.unitPrice || 0,
+            });
+        }
+    }, [item]);
+
+    if (!item) return null;
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        await onSave(item.id, formData);
+        setIsSaving(false);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in duration-200">
+                <h2 className="font-black text-xl mb-6">Editar Ítem del BOM</h2>
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1">Cantidad</label>
+                        <input
+                            type="number"
+                            value={formData.quantity}
+                            onChange={e => setFormData({...formData, quantity: parseFloat(e.target.value) || 0})}
+                            className="w-full p-3 border rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1">Precio Unitario</label>
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={formData.unitPrice}
+                            onChange={e => setFormData({...formData, unitPrice: parseFloat(e.target.value) || 0})}
+                            className="w-full p-3 border rounded-xl bg-slate-50 font-bold outline-none focus:ring-2 focus:ring-indigo-500"
+                        />
+                    </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                    <button onClick={onClose} className="flex-1 p-3.5 bg-slate-100 text-slate-600 rounded-xl font-bold">Cancelar</button>
+                    <button onClick={handleSave} disabled={isSaving} className="flex-1 p-3.5 bg-indigo-600 text-white rounded-xl font-black">
+                        {isSaving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Guardar Cambios'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ========================================================
+// COMPONENTE: MODAL "CARRITO" PARA AGREGAR DEL CATÁLOGO
+// ========================================================
+const CatalogPickerModal = ({ onClose, catalogo, managedLists, onAddItems }) => {
+    const [selectedItems, setSelectedItems] = useState({}); // { id: quantity }
+    const [filters, setFilters] = useState({ search: '', brand: '', category: '', provider: '' });
+    const [isAdding, setIsAdding] = useState(false);
+
+    // Opciones para filtros
+    const brandOptions = [{ value: '', label: 'Todas las Marcas' }, ...managedLists.brands.map(b => ({ value: b.id, label: b.name }))];
+    const categoryOptions = [{ value: '', label: 'Todas las Categorías' }, ...managedLists.categories.map(c => ({ value: c.id, label: c.name }))];
+    const providerOptions = [{ value: '', label: 'Todos los Proveedores' }, ...managedLists.providers.map(p => ({ value: p.id, label: p.name }))];
+
+    const filteredCatalog = useMemo(() => {
+        return catalogo.filter(item => {
+            const matchesSearch = !filters.search || 
+                (item.name || '').toLowerCase().includes(filters.search.toLowerCase()) || 
+                (item.partNumber || '').toLowerCase().includes(filters.search.toLowerCase());
+            
+            const matchesBrand = !filters.brand || item.brand?.id === filters.brand;
+            const matchesCategory = !filters.category || item.category?.id === filters.category;
+            const matchesProvider = !filters.provider || item.defaultProvider?.id === filters.provider;
+
+            return matchesSearch && matchesBrand && matchesCategory && matchesProvider;
+        });
+    }, [catalogo, filters]);
+
+    const handleToggleItem = (id) => {
+        setSelectedItems(prev => {
+            const next = { ...prev };
+            if (next[id]) {
+                delete next[id];
+            } else {
+                next[id] = 1; // Default quantity
+            }
+            return next;
+        });
+    };
+
+    const handleQuantityChange = (id, newQty) => {
+        if (newQty < 1) return;
+        setSelectedItems(prev => ({ ...prev, [id]: newQty }));
+    };
+
+    const handleAdd = async () => {
+        setIsAdding(true);
+        const itemsToAdd = Object.entries(selectedItems).map(([id, qty]) => {
+            const item = catalogo.find(i => i.id === id);
+            return { item, quantity: qty };
+        });
+        await onAddItems(itemsToAdd);
+        setIsAdding(false);
+        onClose();
+    };
+
+    const selectedCount = Object.keys(selectedItems).length;
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col animate-in zoom-in duration-200 overflow-hidden">
+                {/* Header & Filters */}
+                <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="font-black text-2xl flex items-center text-slate-800"><ShoppingCart className="mr-2 text-indigo-600"/> Catálogo de Piezas</h2>
+                        <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-200 rounded-full transition-colors"><X className="w-6 h-6"/></button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                         <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input 
+                                value={filters.search} 
+                                onChange={e => setFilters({...filters, search: e.target.value})} 
+                                placeholder="Buscar pieza o P/N..." 
+                                className="pl-10 pr-4 py-2.5 w-full border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white" 
+                            />
+                         </div>
+                         <SearchableDropdown compact options={brandOptions} value={filters.brand} onChange={val => setFilters({...filters, brand: val})} placeholder="Marca" />
+                         <SearchableDropdown compact options={categoryOptions} value={filters.category} onChange={val => setFilters({...filters, category: val})} placeholder="Categoría" />
+                         <SearchableDropdown compact options={providerOptions} value={filters.provider} onChange={val => setFilters({...filters, provider: val})} placeholder="Proveedor" />
+                    </div>
+                </div>
+
+                {/* List Area */}
+                <div className="flex-1 overflow-y-auto p-4 bg-slate-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredCatalog.map(item => {
+                            const isSelected = !!selectedItems[item.id];
+                            const brandName = item.brand ? managedLists.brands.find(b => b.id === item.brand.id)?.name : '';
+                            
+                            return (
+                                <div 
+                                    key={item.id} 
+                                    onClick={() => handleToggleItem(item.id)}
+                                    className={`relative p-4 rounded-2xl border transition-all cursor-pointer group hover:shadow-md ${isSelected ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-300'}`}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
+                                            {isSelected && <Check className="w-3.5 h-3.5" />}
+                                        </div>
+                                        <span className="font-black text-green-700 text-sm">${(item.lastPrice || 0).toLocaleString()}</span>
+                                    </div>
+                                    <h3 className="font-bold text-slate-800 text-sm leading-tight line-clamp-2 mb-1">{item.name}</h3>
+                                    <p className="text-xs text-slate-400 font-mono mb-2">{item.partNumber}</p>
+                                    
+                                    <div className="flex flex-wrap gap-1 mb-2 min-h-[20px]">
+                                        {brandName && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded font-bold uppercase">{brandName}</span>}
+                                    </div>
+
+                                    {isSelected && (
+                                        <div className="mt-3 pt-3 border-t border-indigo-100 flex items-center justify-between animate-in fade-in slide-in-from-bottom-2 duration-200" onClick={e => e.stopPropagation()}>
+                                            <span className="text-xs font-bold text-indigo-700 uppercase">Cantidad</span>
+                                            <input 
+                                                type="number" 
+                                                min="1" 
+                                                value={selectedItems[item.id]} 
+                                                onChange={e => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                                                className="w-20 p-1.5 text-center border border-indigo-200 rounded-lg text-sm font-bold text-indigo-900 focus:ring-2 focus:ring-indigo-500 outline-none"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                        {filteredCatalog.length === 0 && (
+                            <div className="col-span-full py-12 text-center text-slate-400">
+                                <Search className="w-12 h-12 mx-auto mb-3 opacity-20"/>
+                                <p>No se encontraron piezas con estos filtros.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Footer Bar */}
+                <div className="p-4 border-t border-slate-200 bg-white flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                    <div className="text-sm">
+                        <span className="font-bold text-slate-900">{selectedCount}</span> <span className="text-slate-500">ítems seleccionados</span>
+                    </div>
+                    <div className="flex gap-3">
+                        <button onClick={onClose} className="px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors">Cancelar</button>
+                        <button 
+                            onClick={handleAdd} 
+                            disabled={selectedCount === 0 || isAdding}
+                            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center transition-all active:scale-95"
+                        >
+                            {isAdding ? <Loader2 className="w-5 h-5 animate-spin mr-2"/> : <Plus className="w-5 h-5 mr-2"/>}
+                            {isAdding ? 'Agregando...' : 'Agregar al Proyecto'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ========================================================
 // APLICACIÓN PRINCIPAL
 // ========================================================
-const APP_VERSION = "2.5";
+const APP_VERSION = "3.2";
 
 export default function App() {
   const [proyectos, setProyectos] = useState([]);
@@ -206,21 +525,28 @@ export default function App() {
   const [lastError, setLastError] = useState(null);
 
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
-  const [autoFillTriggered, setAutoFillTriggered] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [listManager, setListManager] = useState({ isOpen: false, type: null, title: ''});
+  const [catalogPickerOpen, setCatalogPickerOpen] = useState(false);
 
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [editingCatalogId, setEditingCatalogId] = useState(null);
+  const [editingBomItem, setEditingBomItem] = useState(null);
+
+  // Estados de "Modo Edición" para las listas
+  const [isBomEditMode, setIsBomEditMode] = useState(false);
+  const [isCatalogEditMode, setIsCatalogEditMode] = useState(false);
 
   const [selectedCatalogItems, setSelectedCatalogItems] = useState([]);
+  const [selectedBomItems, setSelectedBomItems] = useState([]);
 
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [partForm, setPartForm] = useState({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
-  const [bomForm, setBomForm] = useState({ partId: '', quantity: 1, unitPrice: 0, proveedorId: ''});
-  const [searchTerm, setSearchTerm] = useState('');
-  const [bomSearchFilter, setBomSearchFilter] = useState('');
+  
+  // Estados para filtros - Ahora son ARRAYS para permitir múltiple selección
+  const [catalogFilters, setCatalogFilters] = useState({ search: '', brand: [], category: [], provider: [] });
+  const [bomFilters, setBomFilters] = useState({ search: '', brand: [], category: [], provider: [] });
 
   const pdfInputRef = useRef(null);
   const excelInputRef = useRef(null);
@@ -253,6 +579,13 @@ export default function App() {
 
     return () => { unsubCategories(); unsubProviders(); unsubBrands(); };
   }, []);
+
+  // Reset selections when changing project or tab
+  useEffect(() => {
+    setSelectedBomItems([]);
+    setBomFilters({ search: '', brand: [], category: [], provider: [] });
+    setIsBomEditMode(false);
+  }, [activeProject, activeTab]);
 
   const testConnection = async () => {
     setIsDiagnosticOpen(true);
@@ -493,22 +826,6 @@ export default function App() {
     }
 };
 
-  const handlePartSelection = (id) => {
-    setBomSearchFilter('');
-    if (!id) return setBomForm({partId: '', quantity: 1, unitPrice: 0, proveedorId: ''});
-    const p = catalogo.find(x => x.id === id);
-    if (!p) return;
-
-    let providerId = '';
-    if (p.defaultProvider) {
-      providerId = p.defaultProvider.id;
-    }
-
-    setBomForm({...bomForm, partId: id, unitPrice: p.lastPrice || 0, proveedorId: providerId });
-    setAutoFillTriggered(true);
-    setTimeout(() => setAutoFillTriggered(false), 600);
-  };
-
   const handleSaveProject = async (e) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
@@ -607,7 +924,70 @@ export default function App() {
     window.scrollTo({top:0, behavior:'smooth'});
   };
 
-  const handleToggleSelectAll = (items) => {
+  //--- Handlers for BOM item selection ---
+  const handleToggleSelectAllBomItems = (items) => {
+    if (selectedBomItems.length === items.length) {
+      setSelectedBomItems([]);
+    } else {
+      setSelectedBomItems(items.map(i => i.id));
+    }
+  };
+
+  const handleToggleSelectBomItem = (id) => {
+    setSelectedBomItems(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSelectedBomItems = () => {
+    setConfirmDelete({ 
+      isOpen: true, 
+      title: `¿Quitar ${selectedBomItems.length} ítems?`, 
+      message: `Esto quitará permanentemente los ${selectedBomItems.length} ítems seleccionados de este proyecto. No se borrarán del catálogo maestro.`, 
+      onConfirm: async () => {
+        const batch = writeBatch(db);
+        selectedBomItems.forEach(id => {
+          batch.delete(doc(db, 'items_bom', id));
+        });
+        await batch.commit();
+        setSelectedBomItems([]);
+      }
+    });
+  }
+
+  const handleUpdateBomItem = async (itemId, updatedData) => {
+    const itemRef = doc(db, 'items_bom', itemId);
+    const newData = {
+        ...updatedData,
+        totalPrice: (updatedData.quantity || 0) * (updatedData.unitPrice || 0)
+    };
+    await updateDoc(itemRef, newData);
+    setEditingBomItem(null); // Close modal
+  };
+
+  const handleAddFromCatalog = async (itemsToAdd) => {
+      const batch = writeBatch(db);
+      
+      itemsToAdd.forEach(({ item, quantity }) => {
+          const bomRef = doc(collection(db, 'items_bom'));
+          batch.set(bomRef, { 
+              projectId: activeProject.id, 
+              masterPartRef: doc(db, 'catalogo_maestro', item.id), 
+              quantity: Number(quantity), 
+              unitPrice: Number(item.lastPrice || 0), 
+              totalPrice: Number(quantity) * Number(item.lastPrice || 0), 
+              proveedor: item.defaultProvider ? doc(db, 'proveedores', item.defaultProvider.id) : null, 
+              status: 'Requerido', 
+              addedAt: new Date().toISOString() 
+          });
+      });
+
+      await batch.commit();
+  };
+
+
+  //--- Handlers for Catalog item selection ---
+  const handleToggleSelectAllCatalog = (items) => {
     if (selectedCatalogItems.length === items.length) {
       setSelectedCatalogItems([]);
     } else {
@@ -615,13 +995,13 @@ export default function App() {
     }
   };
 
-  const handleToggleSelectItem = (id) => {
+  const handleToggleSelectCatalogItem = (id) => {
     setSelectedCatalogItems(prev => 
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelectedCatalog = () => {
     setConfirmDelete({ 
       isOpen: true, 
       title: `¿Borrar ${selectedCatalogItems.length} ítems?`, 
@@ -637,21 +1017,61 @@ export default function App() {
     });
   }
 
-  const brandOptions = managedLists.brands.map(b => ({ value: b.id, label: b.name }));
-  const categoryOptions = managedLists.categories.map(c => ({ value: c.id, label: c.name }));
-  const providerOptions = managedLists.providers.map(p => ({ value: p.id, label: p.name }));
+  const brandOptions = [...managedLists.brands.map(b => ({ value: b.id, label: b.name }))];
+  const categoryOptions = [...managedLists.categories.map(c => ({ value: c.id, label: c.name }))];
+  const providerOptions = [...managedLists.providers.map(p => ({ value: p.id, label: p.name }))];
 
-  const selectedPartForBom = bomForm.partId ? catalogo.find(p => p.id === bomForm.partId) : null;
+  const filteredCatalogo = useMemo(() => {
+    return catalogo.filter(item => {
+        const brandId = item.brand?.id || '';
+        const categoryId = item.category?.id || '';
+        const providerId = item.defaultProvider?.id || '';
+        const s = catalogFilters.search.toLowerCase();
 
-  const filteredCatalogo = catalogo.filter(item => {
-      const brandName = item.brand ? managedLists.brands.find(b => b.id === item.brand.id)?.name : '';
-      const categoryName = item.category ? managedLists.categories.find(c => c.id === item.category.id)?.name : '';
-      const s = searchTerm.toLowerCase();
-      return String(item.name || '').toLowerCase().includes(s) || 
-             String(item.partNumber || '').toLowerCase().includes(s) || 
-             String(brandName || '').toLowerCase().includes(s) || 
-             String(categoryName || '').toLowerCase().includes(s);
-  })
+        const matchesSearch = !s || (item.name || '').toLowerCase().includes(s) || (item.partNumber || '').toLowerCase().includes(s);
+        const matchesBrand = catalogFilters.brand.length === 0 || catalogFilters.brand.includes(brandId);
+        const matchesCategory = catalogFilters.category.length === 0 || catalogFilters.category.includes(categoryId);
+        const matchesProvider = catalogFilters.provider.length === 0 || catalogFilters.provider.includes(providerId);
+
+        return matchesSearch && matchesBrand && matchesCategory && matchesProvider;
+    });
+  }, [catalogo, catalogFilters]);
+
+  const filteredActiveBomItems = useMemo(() => {
+    return activeBomItems.filter(item => {
+        let details = {};
+        if (item.masterPartRef) {
+            const masterPart = catalogo.find(p => p.id === item.masterPartRef.id);
+            if (!masterPart) return false;
+            details = { 
+                name: masterPart.name, 
+                partNumber: masterPart.partNumber, 
+                brandId: masterPart.brand?.id || '', 
+                categoryId: masterPart.category?.id || '',
+                providerId: item.proveedor?.id || '' 
+            };
+        } else {
+            // For legacy or non-linked items (if any), limited filtering
+             details = { 
+                name: item.name, 
+                partNumber: item.partNumber,
+                brandId: '', 
+                categoryId: '',
+                providerId: item.proveedor ? (typeof item.proveedor === 'string' ? '' : item.proveedor.id) : ''
+            };
+        }
+
+        const s = bomFilters.search.toLowerCase();
+        const matchesSearch = !s || (details.name || '').toLowerCase().includes(s) || (details.partNumber || '').toLowerCase().includes(s);
+        
+        const matchesBrand = bomFilters.brand.length === 0 || bomFilters.brand.includes(details.brandId);
+        const matchesCategory = bomFilters.category.length === 0 || bomFilters.category.includes(details.categoryId);
+        const matchesProvider = bomFilters.provider.length === 0 || bomFilters.provider.includes(details.providerId);
+
+        return matchesSearch && matchesBrand && matchesCategory && matchesProvider;
+    });
+  }, [activeBomItems, catalogo, bomFilters]);
+
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20 overflow-x-hidden">
@@ -680,6 +1100,17 @@ export default function App() {
       )}
 
       {listManager.isOpen && <ListManagerModal title={listManager.title} items={managedLists[listManager.type === 'category' ? 'categories' : listManager.type + 's']?.map(i => i.name) || []} onClose={() => setListManager({ isOpen: false, type: null, title: '' })} onSave={(data) => handleSaveManagedList({ type: listManager.type, data })} />}
+      
+      {editingBomItem && <BomItemEditModal item={editingBomItem} onClose={() => setEditingBomItem(null)} onSave={handleUpdateBomItem} />}
+
+      {catalogPickerOpen && (
+          <CatalogPickerModal 
+            catalogo={catalogo} 
+            managedLists={managedLists} 
+            onClose={() => setCatalogPickerOpen(false)} 
+            onAddItems={handleAddFromCatalog} 
+          />
+      )}
 
       {confirmDelete.isOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
@@ -707,7 +1138,7 @@ export default function App() {
           </div>
         </div>
         <nav className="flex space-x-1 bg-slate-800 p-1 rounded-xl">
-          <button onClick={() => {setActiveTab('proyectos'); setActiveProject(null); setSelectedCatalogItems([]);}} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab !== 'catalogo' && activeTab !== 'bom' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}>Proyectos</button>
+          <button onClick={() => {setActiveTab('proyectos'); setActiveProject(null); setSelectedCatalogItems([]);}} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab !== 'proyectos' && activeTab !== 'catalogo' ? 'text-slate-400' : (activeTab === 'proyectos' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400')}`}>Proyectos</button>
           <button onClick={() => {setActiveTab('catalogo'); setActiveProject(null); setSelectedCatalogItems([]);}} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'catalogo' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}>Catálogo</button>
         </nav>
       </header>
@@ -755,82 +1186,84 @@ export default function App() {
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight">{activeProject.name}</h2>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <div className="relative flex-1">
-                  <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} accept=".pdf" className="hidden" />
-                  <button onClick={() => pdfInputRef.current.click()} disabled={isProcessing} className="w-full bg-slate-900 text-white px-6 py-4 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all disabled:bg-slate-400 min-w-[200px]">
-                    {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2"/> : <Sparkles className="w-5 h-5 mr-2 text-yellow-400 fill-yellow-400"/>}
-                    {isProcessing ? "Procesando..." : 'Importar PDF (IA)'}
-                  </button>
+                 <div className="flex flex-1 gap-3 min-w-[300px]">
+                    <button onClick={() => setCatalogPickerOpen(true)} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all">
+                        <PackagePlus className="w-5 h-5 mr-2"/> Catálogo
+                    </button>
+                    <div className="relative flex-1">
+                        <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} accept=".pdf" className="hidden" />
+                        <button onClick={() => pdfInputRef.current.click()} disabled={isProcessing} className="w-full h-full bg-slate-900 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all disabled:bg-slate-400">
+                            {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2"/> : <Sparkles className="w-5 h-5 mr-2 text-yellow-400 fill-yellow-400"/>}
+                            {isProcessing ? "Procesando" : 'Importar PDF'}
+                        </button>
+                    </div>
                 </div>
-                <div className="bg-green-50 border border-green-100 px-8 py-3 rounded-2xl text-right flex-1 md:flex-none">
-                  <div className="text-[10px] font-black text-green-800 uppercase tracking-widest">Inversión Estimada</div>
-                  <div className="text-3xl font-black text-green-700 tracking-tighter">${(activeBomItems || []).reduce((s,i) => s+(i.totalPrice||0),0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                <div className="bg-green-50 border border-green-100 px-6 py-3 rounded-2xl text-right flex-none min-w-[140px] flex flex-col justify-center">
+                  <div className="text-[10px] font-black text-green-800 uppercase tracking-widest leading-none mb-1">Inversión</div>
+                  <div className="text-2xl font-black text-green-700 tracking-tighter leading-none">${(activeBomItems || []).reduce((s,i) => s+(i.totalPrice||0),0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              <div className="lg:col-span-1">
-                <div className="bg-indigo-900 text-white p-6 rounded-3xl shadow-xl sticky top-24">
-                  <h3 className="font-bold mb-5 flex items-center text-lg uppercase tracking-tighter"><PackagePlus className="mr-2 text-indigo-300"/> Carga Manual</h3>
-                  <div className="space-y-4">
-                    <div className="bg-indigo-950/40 p-3.5 rounded-2xl border border-indigo-800/50 mb-2">
-                      <div className="flex items-center text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-2"><Filter className="w-3 h-3 mr-1"/> Filtrar Catálogo</div>
-                      <input type="text" value={bomSearchFilter} onChange={e => {setBomSearchFilter(e.target.value); setBomForm({...bomForm, partId: ''});}} placeholder="P/N o nombre..." className="w-full p-2.5 bg-indigo-800 border-none text-white rounded-xl text-xs outline-none shadow-inner" />
-                    </div>
-                    <SearchableDropdown dark options={(catalogo || []).filter(c => `${c.name || ''} ${c.partNumber || ''}`.toLowerCase().includes(bomSearchFilter.toLowerCase())).map(c => ({ value: c.id, label: c.name, subLabel: `${c.partNumber} • $${c.lastPrice||0}` }))} value={bomForm.partId} onChange={handlePartSelection} placeholder="📌 Selecciona pieza..." />
-                    {selectedPartForBom && (
-                      <div className="p-3 bg-indigo-950/40 rounded-xl mt-1 space-y-2 border border-indigo-800/50">
-                        <div className="flex items-center flex-wrap gap-2">
-                          { (() => {
-                            const brandName = selectedPartForBom.brand ? managedLists.brands.find(b => b.id === selectedPartForBom.brand.id)?.name : '';
-                            const categoryName = selectedPartForBom.category ? managedLists.categories.find(c => c.id === selectedPartForBom.category.id)?.name : '';
-                            return (<>{brandName && <div className="flex items-center text-[10px] font-black text-gray-300 bg-gray-600/50 px-2 py-1 rounded-full w-max border border-gray-500/50 uppercase tracking-tight"><Tag className="w-3 h-3 mr-1"/>{brandName}</div>}{categoryName && <div className="flex items-center text-[10px] font-black text-purple-300 bg-purple-600/30 px-2 py-1 rounded-full w-max border border-purple-500/50 uppercase tracking-tight"><Tag className="w-3 h-3 mr-1"/>{categoryName}</div>}</>)
-                          })() }
-                        </div>
-                      </div>
-                    )}
-                    <div className={`grid grid-cols-2 gap-3 transition-all duration-500 ${autoFillTriggered ? 'ring-2 ring-green-400 rounded-xl p-1 bg-green-900/20' : ''}`}>
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-black text-indigo-400 uppercase ml-1 mb-1">Cant.</span>
-                        <input type="number" min="1" value={bomForm.quantity} onChange={e => setBomForm({...bomForm, quantity: e.target.value})} className="p-3 bg-indigo-800 border-none text-white rounded-xl focus:ring-2 focus:ring-white outline-none font-bold" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="text-[9px] font-black text-indigo-400 uppercase ml-1 mb-1">Precio $</span>
-                        <div className="relative">
-                          <input type="number" step="0.01" value={bomForm.unitPrice} onChange={e => setBomForm({...bomForm, unitPrice: e.target.value})} className={`w-full p-3 border-none text-white rounded-xl focus:ring-2 focus:ring-white outline-none font-bold ${autoFillTriggered ? 'bg-green-700' : 'bg-indigo-800'}`} />
-                          {autoFillTriggered && <Zap className="absolute right-2 top-3 w-4 h-4 text-yellow-300 animate-bounce" />}
-                        </div>
-                      </div>
-                    </div>
-                    <SearchableDropdown dark options={providerOptions} value={bomForm.proveedorId} onChange={val => setBomForm({...bomForm, proveedorId: val})} placeholder="🚚 Distribuidor..." />
-                    <button onClick={async () => {
-                      if (!bomForm.partId) return alert("Selecciona una pieza");
-                      const part = catalogo.find(p => p.id === bomForm.partId);
-                      const batch = writeBatch(db);
-                      const bomRef = doc(collection(db, 'items_bom'));
-                      batch.set(bomRef, { projectId: activeProject.id, masterPartRef: doc(db, 'catalogo_maestro', part.id), quantity: Number(bomForm.quantity), unitPrice: Number(bomForm.unitPrice), totalPrice: Number(bomForm.quantity) * Number(bomForm.unitPrice), proveedor: bomForm.proveedorId ? doc(db, 'proveedores', bomForm.proveedorId) : null, status: 'Requerido', addedAt: new Date().toISOString() });
-                      batch.update(doc(db, 'catalogo_maestro', part.id), { lastPrice: Number(bomForm.unitPrice), defaultProvider: bomForm.proveedorId ? doc(db, 'proveedores', bomForm.proveedorId) : null });
-                      await batch.commit();
-                      setBomForm({ partId: '', quantity: 1, unitPrice: 0, proveedorId: '' });
-                    }} className="w-full bg-white text-indigo-900 p-4 rounded-2xl font-black mt-4 shadow-lg active:scale-95 transition-all flex items-center justify-center">
-                      <Plus className="w-5 h-5 mr-2"/> Agregar al BOM
+            <div className="grid grid-cols-1 gap-8">
+              <div className="col-span-1 space-y-4">
+                
+                {/* FILTROS Y BÚSQUEDA BOM */}
+                <div className="flex gap-3 items-center">
+                     <div className="relative flex-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <input 
+                            value={bomFilters.search} 
+                            onChange={e => setBomFilters({...bomFilters, search: e.target.value})} 
+                            placeholder="Buscar en BOM..." 
+                            className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50" 
+                        />
+                     </div>
+                     <FilterPopover 
+                        filters={bomFilters} 
+                        setFilters={setBomFilters}
+                        options={{
+                            brands: brandOptions,
+                            categories: categoryOptions,
+                            providers: providerOptions
+                        }}
+                     />
+                     <button 
+                        onClick={() => { setIsBomEditMode(!isBomEditMode); setSelectedBomItems([]); }}
+                        className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isBomEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                     >
+                        <Settings2 className="w-4 h-4" />
+                        <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
+                     </button>
+                </div>
+
+                {selectedBomItems.length > 0 && isBomEditMode && (
+                  <div className="bg-red-50 border border-red-200 p-3 rounded-2xl flex items-center justify-between animate-in fade-in duration-300">
+                    <span className="font-bold text-red-700 text-sm">{selectedBomItems.length} ítems seleccionados</span>
+                    <button onClick={handleDeleteSelectedBomItems} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg flex items-center text-sm">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Eliminar Seleccionados
                     </button>
                   </div>
-                </div>
-              </div>
-              <div className="lg:col-span-3">
+                )}
                 <div className="bg-white rounded-3xl border border-slate-100 shadow-sm min-h-[400px] overflow-hidden">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                      <tr><th className="p-5">Cant</th><th className="p-5">Descripción del Ítem</th><th className="p-5 text-right">Costo</th><th className="p-5 text-center">⚙️</th></tr>
+                      <tr>
+                        {isBomEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllBomItems(filteredActiveBomItems)} checked={filteredActiveBomItems.length > 0 && selectedBomItems.length === filteredActiveBomItems.length} /></th>}
+                        <th className="p-5 w-16">Cant</th>
+                        <th className="p-5">Descripción del Ítem</th>
+                        <th className="p-5 text-right">Costo</th>
+                        {isBomEditMode && <th className="p-5 text-center w-28">Acciones</th>}
+                      </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {(activeBomItems || []).map(item => {
+                      {(filteredActiveBomItems || []).map(item => {
                         let details = {}; let providerName = '';
+                        const isSelected = selectedBomItems.includes(item.id);
                         if (item.masterPartRef) {
                           const masterPart = catalogo.find(p => p.id === item.masterPartRef.id);
-                          if (!masterPart) return <tr key={item.id}><td colSpan="4" className="p-4 text-center text-slate-400">Ítem obsoleto</td></tr>;
+                          if (!masterPart) return <tr key={item.id}><td colSpan="5" className="p-4 text-center text-slate-400">Ítem obsoleto o borrado del catálogo.</td></tr>;
                           details = { name: masterPart.name, partNumber: masterPart.partNumber, brandName: managedLists.brands.find(b => b.id === masterPart.brand?.id)?.name || '', categoryName: managedLists.categories.find(c => c.id === masterPart.category?.id)?.name || '' };
                           providerName = managedLists.providers.find(p => p.id === item.proveedor?.id)?.name || '';
                         } else { 
@@ -838,24 +1271,30 @@ export default function App() {
                           providerName = item.proveedor ? (typeof item.proveedor === 'string' ? item.proveedor : managedLists.providers.find(p => p.id === item.proveedor.id)?.name) : '';
                         }
                         return (
-                          <tr key={item.id} className="hover:bg-indigo-50/20 group transition-colors">
+                          <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50/50'}`}>
+                            {isBomEditMode && <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectBomItem(item.id)} /></td>}
                             <td className="p-5 font-black text-lg text-slate-700">{item.quantity}</td>
                             <td className="p-5">
                               <div className="font-bold text-slate-900 leading-tight">{details.name || 'Sin nombre'}</div>
                               <div className="text-[10px] font-mono text-slate-400 mt-1">{details.partNumber || 'S/N'}</div>
                               <div className="flex items-center flex-wrap gap-2 mt-2">
-                                {details.brandName && <div className="flex items-center text-[9px] font-black text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full w-max border border-gray-200 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{details.brandName}</div>}
-                                {details.categoryName && <div className="flex items-center text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full w-max border border-purple-100 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{details.categoryName}</div>}
-                                {providerName && <div className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded w-max mt-2 border border-indigo-100 uppercase tracking-tighter">Prov: {providerName}</div>}
+                                {details.brandName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-gray-600 bg-gray-100 border-gray-200"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0"/>{details.brandName}</div>}
+                                {details.categoryName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-purple-600 bg-purple-50 border-purple-100"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0"/>{details.categoryName}</div>}
+                                {providerName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-indigo-500 bg-indigo-50 border-indigo-100">Prov: {providerName}</div>}
                               </div>
                             </td>
                             <td className="p-5 text-right">
                               <div className="font-black text-slate-900 text-lg">${(item.totalPrice||0).toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
                               <div className="text-[10px] text-slate-400">${item.unitPrice}/u</div>
                             </td>
-                            <td className="p-5 text-center">
-                              <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
-                            </td>
+                            {isBomEditMode && (
+                                <td className="p-5 text-center">
+                                <div className='flex justify-center items-center gap-2'>
+                                    <button onClick={() => setEditingBomItem(item)} className="w-8 h-8 flex items-center justify-center bg-amber-100 text-amber-600 rounded-lg hover:bg-amber-200 transition-all active:scale-90"><Pencil className="w-4 h-4"/></button>
+                                    <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="w-8 h-8 flex items-center justify-center bg-red-100 text-red-500 hover:bg-red-200 rounded-lg transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
+                                </div>
+                                </td>
+                            )}
                           </tr>
                         )}
                       )}
@@ -876,17 +1315,17 @@ export default function App() {
                   <input value={partForm.name} onChange={e => setPartForm({...partForm, name: e.target.value})} placeholder="Descripción del repuesto..." className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-slate-50 font-bold" required/>
                   <input value={partForm.partNumber} onChange={e => setPartForm({...partForm, partNumber: e.target.value})} placeholder="P/N Referencia..." className="w-full p-4 border rounded-2xl font-mono uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50 font-bold" required/>
                   <div className="flex items-center gap-2">
-                    <div className="flex-grow"><SearchableDropdown options={brandOptions} value={partForm.brand} onChange={val => setPartForm({...partForm, brand: val})} placeholder="🏭 Marca..."/></div>
+                    <div className="flex-grow"><SearchableDropdown options={brandOptions.filter(b => b.value)} value={partForm.brand} onChange={val => setPartForm({...partForm, brand: val})} placeholder="🏭 Marca..."/></div>
                     <button type="button" onClick={() => setListManager({ isOpen: true, type: 'brand', title: 'Gestionar Marcas'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="flex-grow"><SearchableDropdown options={categoryOptions} value={partForm.category} onChange={val => setPartForm({...partForm, category: val})} placeholder="🏷️ Categoría..."/></div>
+                    <div className="flex-grow"><SearchableDropdown options={categoryOptions.filter(c => c.value)} value={partForm.category} onChange={val => setPartForm({...partForm, category: val})} placeholder="🏷️ Categoría..."/></div>
                     <button type="button" onClick={() => setListManager({ isOpen: true, type: 'category', title: 'Gestionar Categorías'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
                   </div>
                   <div className="border-t pt-4 border-slate-50 space-y-4">
                     <input type="number" step="0.01" value={partForm.lastPrice} onChange={e => setPartForm({...partForm, lastPrice: e.target.value})} placeholder="Precio Estimado $" className="w-full p-3.5 border border-green-100 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-green-500" />
                     <div className="flex items-center gap-2">
-                      <div className="flex-grow"><SearchableDropdown options={providerOptions} value={partForm.defaultProvider} onChange={val => setPartForm({...partForm, defaultProvider: val})} placeholder="🚚 Proveedor..."/></div>
+                      <div className="flex-grow"><SearchableDropdown options={providerOptions.filter(p => p.value)} value={partForm.defaultProvider} onChange={val => setPartForm({...partForm, defaultProvider: val})} placeholder="🚚 Proveedor..."/></div>
                       <button type="button" onClick={() => setListManager({ isOpen: true, type: 'provider', title: 'Gestionar Proveedores'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
                     </div>
                   </div>
@@ -896,21 +1335,37 @@ export default function App() {
               </div>
             </div>
             <div className="lg:col-span-2 space-y-4">
-              <div className="flex gap-4 items-center">
+              <div className="flex gap-3 items-center">
                  <div className="relative flex-1">
                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                   <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Filtrar por nombre, P/N, marca..." className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500" />
+                   <input value={catalogFilters.search} onChange={e => setCatalogFilters({...catalogFilters, search: e.target.value})} placeholder="Filtrar por nombre, P/N, marca..." className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500" />
                  </div>
+                 <FilterPopover 
+                    filters={catalogFilters} 
+                    setFilters={setCatalogFilters}
+                    options={{
+                        brands: brandOptions,
+                        categories: categoryOptions,
+                        providers: providerOptions
+                    }}
+                 />
+                 <button 
+                    onClick={() => { setIsCatalogEditMode(!isCatalogEditMode); setSelectedCatalogItems([]); }}
+                    className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isCatalogEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                 >
+                    <Settings2 className="w-4 h-4" />
+                    <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
+                 </button>
                  <input type="file" ref={excelInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
-                 <button onClick={() => excelInputRef.current.click()} disabled={isProcessing} className="bg-green-600 text-white px-5 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:bg-slate-400 whitespace-nowrap">
+                 <button onClick={() => excelInputRef.current.click()} disabled={isProcessing} className="bg-green-600 text-white px-5 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:bg-slate-400 whitespace-nowrap h-full">
                    <Database className="w-5 h-5 mr-2"/>Importar Excel
                  </button>
               </div>
 
-              {selectedCatalogItems.length > 0 && (
+              {selectedCatalogItems.length > 0 && isCatalogEditMode && (
                 <div className="bg-red-50 border border-red-200 p-3 rounded-2xl flex items-center justify-between animate-in fade-in duration-300">
                   <span className="font-bold text-red-700 text-sm">{selectedCatalogItems.length} ítems seleccionados</span>
-                  <button onClick={handleDeleteSelected} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg flex items-center text-sm">
+                  <button onClick={handleDeleteSelectedCatalog} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg flex items-center text-sm">
                     <Trash2 className="w-4 h-4 mr-2" />
                     Eliminar Seleccionados
                   </button>
@@ -921,10 +1376,10 @@ export default function App() {
                 <table className="w-full text-left text-sm">
                   <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
                     <tr>
-                      <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAll(filteredCatalogo)} checked={selectedCatalogItems.length === filteredCatalogo.length && filteredCatalogo.length > 0} /></th>
+                      {isCatalogEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllCatalog(filteredCatalogo)} checked={selectedCatalogItems.length === filteredCatalogo.length && filteredCatalogo.length > 0} /></th>}
                       <th className="p-5">Pieza</th>
                       <th className="p-5 text-right">Precio Base</th>
-                      <th className="p-5 text-center">⚙️</th>
+                      {isCatalogEditMode && <th className="p-5 text-center">⚙️</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -934,20 +1389,24 @@ export default function App() {
                       const categoryName = item.category ? managedLists.categories.find(c => c.id === item.category.id)?.name : '';
                       return (
                         <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
-                          <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectItem(item.id)} /></td>
+                          {isCatalogEditMode && <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectCatalogItem(item.id)} /></td>}
                           <td className="p-5">
                             <div className="font-bold text-slate-800 text-base leading-tight">{item.name || 'Sin nombre'}</div>
                             <div className="text-[10px] font-mono text-slate-500 mt-1">{item.partNumber}</div>
                             <div className="flex items-center flex-wrap gap-2 mt-2">
-                              {brandName && <div className="flex items-center text-[9px] font-black text-gray-600 bg-gray-100 px-2 py-0.5 rounded-full w-max border border-gray-200 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{brandName}</div>}
-                              {categoryName && <div className="flex items-center text-[9px] font-black text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full w-max border border-purple-100 uppercase tracking-tighter"><Tag className="w-3 h-3 mr-1"/>{categoryName}</div>}
+                              {brandName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-gray-600 bg-gray-100 border-gray-200"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0"/>{brandName}</div>}
+                              {categoryName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-purple-600 bg-purple-50 border-purple-100"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0"/>{categoryName}</div>}
                             </div>
                           </td>
                           <td className="p-5 text-right font-black text-green-700 text-lg">${(item.lastPrice || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                          <td className="p-5 text-center flex justify-center space-x-1">
-                            <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="p-2 text-amber-500 hover:bg-amber-50 rounded-lg"><Pencil className="w-4 h-4"/></button>
-                            <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) });}} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><Trash2 className="w-4 h-4"/></button>
-                          </td>
+                          {isCatalogEditMode && (
+                            <td className="p-5 text-center">
+                                <div className="flex justify-center items-center gap-2">
+                                    <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="w-8 h-8 flex items-center justify-center bg-amber-100 text-amber-600 rounded-lg hover:bg-amber-200 transition-all active:scale-90"><Pencil className="w-4 h-4"/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) });}} className="w-8 h-8 flex items-center justify-center bg-red-100 text-red-500 hover:bg-red-200 rounded-lg transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
+                                </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -976,7 +1435,7 @@ export default function App() {
                 <span className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1">Notas</span>
                 <textarea value={newProjectDesc} onChange={e => setNewProjectDesc(e.target.value)} placeholder="Centro de costos o justificación..." className="w-full p-4 border border-slate-200 rounded-2xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500" rows="3" />
               </div>
-              <button type="submit" className="w-full p-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all text-lg">
+              <button type="submit" className={`w-full p-5 bg-indigo-600 text-white rounded-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all text-lg`}>
                 {editingProjectId ? 'Actualizar Proyecto' : 'Crear Proyecto'}
               </button>
             </form>
