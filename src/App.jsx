@@ -4,7 +4,7 @@ import {
   ChevronRight, DollarSign, ArrowLeft, 
   PackagePlus, X, Pencil, BrainCircuit, 
   Loader2, Sparkles, Filter, Zap, Activity, Tag, AlertCircle, ShoppingCart, Check,
-  Settings2, Edit3
+  SlidersHorizontal, Edit3
 } from 'lucide-react';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
@@ -1232,7 +1232,7 @@ export default function App() {
                         onClick={() => { setIsBomEditMode(!isBomEditMode); setSelectedBomItems([]); }}
                         className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isBomEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                      >
-                        <Settings2 className="w-4 h-4" />
+                        <SlidersHorizontal className="w-4 h-4" />
                         <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
                      </button>
                 </div>
@@ -1353,7 +1353,7 @@ export default function App() {
                     onClick={() => { setIsCatalogEditMode(!isCatalogEditMode); setSelectedCatalogItems([]); }}
                     className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isCatalogEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                  >
-                    <Settings2 className="w-4 h-4" />
+                    <SlidersHorizontal className="w-4 h-4" />
                     <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
                  </button>
                  <input type="file" ref={excelInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
