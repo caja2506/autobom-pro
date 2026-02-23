@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   FolderGit2, Database, Search, Plus, Trash2, 
   ChevronRight, DollarSign, ArrowLeft, 
-  PackagePlus, X, Pencil, BrainCircuit, 
+  PackagePlus, X, BrainCircuit, 
   Loader2, Sparkles, Filter, Zap, Activity, Tag, AlertCircle, ShoppingCart, Check,
-  SlidersHorizontal, Edit3
+  SlidersHorizontal, Edit3, Save
 } from 'lucide-react';
 
 // --- CONFIGURACIÓN DE FIREBASE ---
@@ -258,7 +258,7 @@ const ListManagerModal = ({ title, items: initialItems, onSave, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[400] flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in duration-200">
                 <h2 className="font-black text-xl mb-6 flex items-center"><Tag className="mr-2"/> {title}</h2>
                 <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
@@ -350,6 +350,79 @@ const BomItemEditModal = ({ item, onClose, onSave }) => {
         </div>
     );
 };
+
+// ========================================================
+// COMPONENTE: MODAL DE REGISTRO MAESTRO (CREAR/EDITAR)
+// ========================================================
+const MasterRecordModal = ({ isOpen, onClose, onSave, initialData, managedLists, onOpenManager }) => {
+    const [formData, setFormData] = useState({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
+    
+    // Opciones para filtros dentro del modal
+    const brandOptions = [{ value: '', label: 'Sin Marca' }, ...managedLists.brands.map(b => ({ value: b.id, label: b.name }))];
+    const categoryOptions = [{ value: '', label: 'Sin Categoría' }, ...managedLists.categories.map(c => ({ value: c.id, label: c.name }))];
+    const providerOptions = [{ value: '', label: 'Sin Proveedor' }, ...managedLists.providers.map(p => ({ value: p.id, label: p.name }))];
+
+    useEffect(() => {
+        if (isOpen) {
+            if (initialData) {
+                setFormData({
+                    name: initialData.name || '',
+                    partNumber: initialData.partNumber || '',
+                    lastPrice: initialData.lastPrice || 0,
+                    defaultProvider: initialData.defaultProvider?.id || '',
+                    category: initialData.category?.id || '',
+                    brand: initialData.brand?.id || ''
+                });
+            } else {
+                setFormData({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
+            }
+        }
+    }, [isOpen, initialData]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(formData);
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in duration-200">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="font-black text-xl flex items-center text-slate-800 uppercase tracking-tighter">
+                        <Database className="mr-2 text-indigo-600 w-6 h-6" /> 
+                        {initialData ? 'Editar Maestro' : 'Nuevo Registro Maestro'}
+                    </h2>
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><X className="w-5 h-5"/></button>
+                </div>
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Descripción del repuesto..." className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-slate-50 font-bold" required/>
+                  <input value={formData.partNumber} onChange={e => setFormData({...formData, partNumber: e.target.value})} placeholder="P/N Referencia..." className="w-full p-4 border rounded-2xl font-mono uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50 font-bold" required/>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-grow"><SearchableDropdown options={brandOptions} value={formData.brand} onChange={val => setFormData({...formData, brand: val})} placeholder="🏭 Marca..."/></div>
+                    <button type="button" onClick={() => onOpenManager('brand')} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-grow"><SearchableDropdown options={categoryOptions} value={formData.category} onChange={val => setFormData({...formData, category: val})} placeholder="🏷️ Categoría..."/></div>
+                    <button type="button" onClick={() => onOpenManager('category')} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
+                  </div>
+                  <div className="border-t pt-4 border-slate-50 space-y-4">
+                    <input type="number" step="0.01" value={formData.lastPrice} onChange={e => setFormData({...formData, lastPrice: e.target.value})} placeholder="Precio Estimado $" className="w-full p-3.5 border border-green-100 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-green-500" />
+                    <div className="flex items-center gap-2">
+                      <div className="flex-grow"><SearchableDropdown options={providerOptions} value={formData.defaultProvider} onChange={val => setFormData({...formData, defaultProvider: val})} placeholder="🚚 Proveedor..."/></div>
+                      <button type="button" onClick={() => onOpenManager('provider')} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
+                    </div>
+                  </div>
+                  <button type="submit" className={`w-full p-4 text-white rounded-2xl font-black shadow-lg transition-all ${initialData ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-900 hover:bg-black'}`}>
+                      {initialData ? 'Actualizar Registro' : 'Guardar Registro'}
+                  </button>
+                </form>
+            </div>
+        </div>
+    );
+}
 
 // ========================================================
 // COMPONENTE: MODAL "CARRITO" PARA AGREGAR DEL CATÁLOGO
@@ -528,6 +601,10 @@ export default function App() {
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [listManager, setListManager] = useState({ isOpen: false, type: null, title: ''});
   const [catalogPickerOpen, setCatalogPickerOpen] = useState(false);
+  
+  // Nuevo estado para el modal de Master Record
+  const [isMasterRecordModalOpen, setIsMasterRecordModalOpen] = useState(false);
+  const [editingMasterRecord, setEditingMasterRecord] = useState(null); // null = nuevo, objeto = editar
 
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [editingCatalogId, setEditingCatalogId] = useState(null);
@@ -859,6 +936,27 @@ export default function App() {
     setEditingCatalogId(null);
     setPartForm({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
   };
+
+  const saveMasterRecord = async (formData) => {
+    if (!formData.name || !formData.partNumber) return alert("Nombre y P/N obligatorios.");
+    
+    const data = {
+        name: formData.name,
+        partNumber: formData.partNumber,
+        lastPrice: Number(formData.lastPrice) || 0,
+        brand: formData.brand ? doc(db, 'marcas', formData.brand) : null,
+        category: formData.category ? doc(db, 'categorias', formData.category) : null,
+        defaultProvider: formData.defaultProvider ? doc(db, 'proveedores', formData.defaultProvider) : null,
+    };
+
+    if (editingMasterRecord) {
+        await updateDoc(doc(db, 'catalogo_maestro', editingMasterRecord.id), data);
+    } else {
+        await setDoc(doc(collection(db, 'catalogo_maestro')), data);
+    }
+    setEditingMasterRecord(null);
+    setIsMasterRecordModalOpen(false);
+  };
   
   const handleSaveManagedList = async ({ type, data }) => {
     const { renames, deleted, added } = data;
@@ -1103,6 +1201,15 @@ export default function App() {
       
       {editingBomItem && <BomItemEditModal item={editingBomItem} onClose={() => setEditingBomItem(null)} onSave={handleUpdateBomItem} />}
 
+      <MasterRecordModal 
+        isOpen={isMasterRecordModalOpen} 
+        onClose={() => setIsMasterRecordModalOpen(false)} 
+        onSave={saveMasterRecord}
+        initialData={editingMasterRecord}
+        managedLists={managedLists}
+        onOpenManager={(type) => setListManager({ isOpen: true, type, title: `Gestionar ${type === 'brand' ? 'Marcas' : type === 'category' ? 'Categorías' : 'Proveedores'}` })}
+      />
+
       {catalogPickerOpen && (
           <CatalogPickerModal 
             catalogo={catalogo} 
@@ -1169,7 +1276,7 @@ export default function App() {
                       </div>
                     </div>
                     <div className="absolute top-4 right-4 flex space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => {e.stopPropagation(); setEditingProjectId(p.id); setNewProjectName(p.name); setNewProjectDesc(p.description); setIsProjectModalOpen(true);}} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100"><Pencil className="w-4 h-4"/></button>
+                      <button onClick={(e) => {e.stopPropagation(); setEditingProjectId(p.id); setNewProjectName(p.name); setNewProjectDesc(p.description); setIsProjectModalOpen(true);}} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100"><Edit3 className="w-4 h-4"/></button>
                       <button onClick={(e) => {e.stopPropagation(); setConfirmDelete({ isOpen: true, title: '¿Borrar proyecto?', message: `Se borrarán todos los datos de "${p.name}".`, onConfirm: () => deleteDoc(doc(db, 'proyectos_bom', p.id)) });}} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100"><Trash2 className="w-4 h-4"/></button>
                     </div>
                   </div>
@@ -1290,8 +1397,8 @@ export default function App() {
                             {isBomEditMode && (
                                 <td className="p-5 text-center">
                                 <div className='flex justify-center items-center gap-2'>
-                                    <button onClick={() => setEditingBomItem(item)} className="w-8 h-8 flex items-center justify-center bg-amber-100 text-amber-600 rounded-lg hover:bg-amber-200 transition-all active:scale-90"><Pencil className="w-4 h-4"/></button>
-                                    <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="w-8 h-8 flex items-center justify-center bg-red-100 text-red-500 hover:bg-red-200 rounded-lg transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
+                                    <button onClick={() => setEditingBomItem(item)} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4"/></button>
+                                    <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
                                 </div>
                                 </td>
                             )}
@@ -1307,34 +1414,8 @@ export default function App() {
         )}
 
         {activeTab === 'catalogo' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in duration-300">
-            <div className="lg:col-span-1">
-              <div className={`bg-white p-6 rounded-3xl border shadow-sm sticky top-24 ${editingCatalogId ? 'ring-4 ring-amber-100 border-amber-300' : ''}`}>
-                <h2 className="font-black text-lg mb-5 flex items-center text-slate-800 uppercase tracking-tighter"><Database className="mr-2 text-indigo-600" /> Registro Maestro</h2>
-                <form onSubmit={handleSavePart} className="space-y-4">
-                  <input value={partForm.name} onChange={e => setPartForm({...partForm, name: e.target.value})} placeholder="Descripción del repuesto..." className="w-full p-4 border rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all bg-slate-50 font-bold" required/>
-                  <input value={partForm.partNumber} onChange={e => setPartForm({...partForm, partNumber: e.target.value})} placeholder="P/N Referencia..." className="w-full p-4 border rounded-2xl font-mono uppercase focus:ring-2 focus:ring-indigo-500 outline-none transition-all bg-slate-50 font-bold" required/>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-grow"><SearchableDropdown options={brandOptions.filter(b => b.value)} value={partForm.brand} onChange={val => setPartForm({...partForm, brand: val})} placeholder="🏭 Marca..."/></div>
-                    <button type="button" onClick={() => setListManager({ isOpen: true, type: 'brand', title: 'Gestionar Marcas'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-grow"><SearchableDropdown options={categoryOptions.filter(c => c.value)} value={partForm.category} onChange={val => setPartForm({...partForm, category: val})} placeholder="🏷️ Categoría..."/></div>
-                    <button type="button" onClick={() => setListManager({ isOpen: true, type: 'category', title: 'Gestionar Categorías'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
-                  </div>
-                  <div className="border-t pt-4 border-slate-50 space-y-4">
-                    <input type="number" step="0.01" value={partForm.lastPrice} onChange={e => setPartForm({...partForm, lastPrice: e.target.value})} placeholder="Precio Estimado $" className="w-full p-3.5 border border-green-100 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-green-500" />
-                    <div className="flex items-center gap-2">
-                      <div className="flex-grow"><SearchableDropdown options={providerOptions.filter(p => p.value)} value={partForm.defaultProvider} onChange={val => setPartForm({...partForm, defaultProvider: val})} placeholder="🚚 Proveedor..."/></div>
-                      <button type="button" onClick={() => setListManager({ isOpen: true, type: 'provider', title: 'Gestionar Proveedores'})} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5"/></button>
-                    </div>
-                  </div>
-                  <button type="submit" className={`w-full p-4 text-white rounded-2xl font-black shadow-lg transition-all ${editingCatalogId ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-900 hover:bg-black'}`}>{editingCatalogId ? 'Actualizar Registro' : 'Guardar Registro'}</button>
-                  {editingCatalogId && (<button type="button" onClick={() => {setEditingCatalogId(null); setPartForm({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });}} className="w-full text-xs font-bold text-slate-400 hover:text-slate-600 pt-2">Cancelar Edición</button>)}
-                </form>
-              </div>
-            </div>
-            <div className="lg:col-span-2 space-y-4">
+          <div className="grid grid-cols-1 gap-8 animate-in fade-in duration-300">
+            <div className="space-y-4">
               <div className="flex gap-3 items-center">
                  <div className="relative flex-1">
                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1349,6 +1430,9 @@ export default function App() {
                         providers: providerOptions
                     }}
                  />
+                 <button onClick={() => { setEditingMasterRecord(null); setIsMasterRecordModalOpen(true); }} className="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all whitespace-nowrap h-full">
+                   <Plus className="w-5 h-5 mr-2"/>Nuevo Registro
+                 </button>
                  <button 
                     onClick={() => { setIsCatalogEditMode(!isCatalogEditMode); setSelectedCatalogItems([]); }}
                     className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isCatalogEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
@@ -1402,8 +1486,8 @@ export default function App() {
                           {isCatalogEditMode && (
                             <td className="p-5 text-center">
                                 <div className="flex justify-center items-center gap-2">
-                                    <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="w-8 h-8 flex items-center justify-center bg-amber-100 text-amber-600 rounded-lg hover:bg-amber-200 transition-all active:scale-90"><Pencil className="w-4 h-4"/></button>
-                                    <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) });}} className="w-8 h-8 flex items-center justify-center bg-red-100 text-red-500 hover:bg-red-200 rounded-lg transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4"/></button>
+                                    <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) });}} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4"/></button>
                                 </div>
                             </td>
                           )}
