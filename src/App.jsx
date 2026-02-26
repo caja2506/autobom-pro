@@ -31,7 +31,7 @@ const XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.m
 
 // --- API GEMINI CONFIG ---
 const API_KEY = "AIzaSyAgG7jwwxHRqDW2IaPRImr6GK-SqjFKDsQ";
-const MODEL_NAME = "gemini-1.5-flash";
+const MODEL_NAME = "gemini-2.5-flash";
 
 // ========================================================
 // COMPONENTE: DROPDOWN DE BÚSQUEDA (SOPORTA MULTI-SELECCIÓN)
