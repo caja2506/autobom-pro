@@ -18,7 +18,7 @@ AutoBOM Pro es una aplicación de gestión de "Bill of Materials" (BOM) diseñad
 2.  **Extracción de Texto:** La librería `pdf.js` se utiliza para extraer el contenido de texto plano del documento.
 3.  **Prompt a Gemini:** Se envía un `prompt` estructurado a la API de Gemini, solicitando la extracción de ítems en un formato JSON específico. El prompt incluye reglas estrictas:
     *   Ignorar texto irrelevante (encabezados, legales).
-    *   Normalizar campos: limpiar P/N, resumir descripciones, convertir precios a formato decimal.
+    *   Normalizar campos: limpiar P/N (mayúsculas, sin espacios), resumir descripciones, convertir precios a formato decimal.
     *   Devolver `""` o `0` para campos faltantes.
 4.  **Revisión en Cliente:** Antes de escribir en la base de datos, la aplicación:
     *   Carga los P/N del `catalogo_maestro` en el estado de React.
@@ -31,19 +31,22 @@ AutoBOM Pro es una aplicación de gestión de "Bill of Materials" (BOM) diseñad
 ### Colecciones de Firestore
 
 *   `proyectos_bom`: Almacena la información principal de cada proyecto (nombre, descripción, fecha).
-*   `catalogo_maestro`: La base de datos centralizada de todas las piezas únicas.
+*   `catalogo_maestro`: La base de datos centralizada de todas las piezas únicas. **P/N es la clave primaria lógica (siempre en mayúsculas y sin espacios)**.
 *   `items_bom`: La lista de materiales de cada proyecto, vinculando piezas del catálogo a un proyecto.
 *   `marcas`, `categorias`, `proveedores`: Listas gestionables para etiquetar y organizar las piezas.
 
 ## 3. Plan de Implementación Actual
 
-**Solicitud:** Corregir y detallar la lógica de IA y datos según las especificaciones técnicas.
+**Solicitud:** Aplicar reglas de arquitectura y estilos, asegurando la normalización de P/N y un prompt estricto.
 
-**Estado:** La funcionalidad de importación de PDF fue restaurada. Ahora se está refinando el prompt enviado a la IA para mejorar la precisión y la resiliencia de los datos, y para asegurar la consistencia con las reglas de negocio de la aplicación.
+**Estado:** Las reglas han sido implementadas exitosamente:
+*   `APP_VERSION` actualizada a 3.3.
+*   Prompt de Gemini endurecido.
+*   Normalización de P/N (sin espacios, mayúsculas) aplicada a importación de Excel, IA y formularios manuales.
 
-**Pasos:**
+**Pasos Recientes:**
 
 1.  **[COMPLETADO]** Leer el archivo `src/App.jsx` para analizar la implementación actual.
-2.  **[COMPLETADO]** Crear el archivo `blueprint.md` para documentar la arquitectura del proyecto.
-3.  **[ACTUAL]** Modificar la función `handlePdfUpload` en `src/App.jsx` para actualizar el `prompt` de la IA con reglas más estrictas, incluyendo el manejo de valores nulos, la normalización de campos y el resumen de descripciones.
-4.  **[PENDIENTE]** Validar que la aplicación funcione correctamente después de la actualización del prompt.
+2.  **[COMPLETADO]** Aplicar normalización de Part Number en todos los procesadores de importación y formularios.
+3.  **[COMPLETADO]** Modificar la función `handlePdfUpload` en `src/App.jsx` para actualizar el `prompt` de la IA con reglas más estrictas.
+4.  **[COMPLETADO]** Actualizar la versión de la app.

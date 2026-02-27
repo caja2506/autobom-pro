@@ -581,7 +581,7 @@ const CatalogPickerModal = ({ onClose, catalogo, managedLists, onAddItems }) => 
 // ========================================================
 // APLICACIÓN PRINCIPAL
 // ========================================================
-const APP_VERSION = "3.2";
+const APP_VERSION = "3.3";
 
 export default function App() {
   const [proyectos, setProyectos] = useState([]);
@@ -708,7 +708,7 @@ export default function App() {
       if (!text.trim()) throw new Error("No pudimos extraer texto de este PDF.");
 
       setProcessingStatus(`Enviando texto a ${MODEL_NAME}...`);
-      const prompt = `Analiza el texto de una cotización. Extrae los datos y devuelve EXCLUSIVAMENTE un JSON con esta estructura: { "supplier": "Nombre Proveedor", "items": [ { "pn": "Número de parte", "description": "Descripción", "quantity": numero, "unitPrice": numero } ] }. Texto:\n\n${text}`;
+      const prompt = `Analiza el texto de una cotización. Extrae los datos y devuelve EXCLUSIVAMENTE un JSON estricto con la siguiente estructura: { "supplier": "Nombre Proveedor", "items": [ { "pn": "Número de parte", "description": "Descripción", "quantity": numero, "unitPrice": numero } ] }.\nReglas:\n1. Ignora texto irrelevante, encabezados o textos legales.\n2. Los pn (Part Number) deben estar en MAYÚSCULAS y resolverse sin espacios.\n3. description debe ser concisa, técnica y resumida.\n4. quantity y unitPrice deben ser numéricos (usa 0 si falta el dato).\n5. Si no hay proveedor, usa "".\nDevuelve SOLO el JSON sin delimitadores markdown.\n\nTexto:\n\n${text}`;
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -740,11 +740,13 @@ export default function App() {
         }
 
         for(const item of data.items) {
-            let part = currentCatalog.find(p => p.partNumber && item.pn && (p.partNumber.toLowerCase() === item.pn.toLowerCase()));
+            const rawPn = String(item.pn || 'S/N');
+            const normalizedPn = rawPn.replace(/\s+/g, '').toUpperCase();
+            let part = currentCatalog.find(p => p.partNumber && p.partNumber.replace(/\s+/g, '').toUpperCase() === normalizedPn);
             let partId = null;
             if (!part) {
                 const catRef = doc(collection(db, 'catalogo_maestro'));
-                const newPartData = { name: item.description||'', partNumber: (item.pn||'S/N').toUpperCase(), lastPrice: Number(item.unitPrice)||0, defaultProvider: newSupplierId ? doc(db, 'proveedores', newSupplierId) : null, brand: null, category: null }; 
+                const newPartData = { name: String(item.description||'').trim(), partNumber: normalizedPn, lastPrice: Number(item.unitPrice)||0, defaultProvider: newSupplierId ? doc(db, 'proveedores', newSupplierId) : null, brand: null, category: null }; 
                 batch.set(catRef, newPartData);
                 partId = catRef.id;
             } else {
@@ -798,7 +800,7 @@ export default function App() {
         catalogSnapshot.docs.forEach(doc => {
             const data = doc.data();
             if(data.partNumber) {
-                currentCatalogMap.set(data.partNumber.toLowerCase(), { id: doc.id, ...data });
+                currentCatalogMap.set(String(data.partNumber).replace(/\s+/g, '').toUpperCase(), { id: doc.id, ...data });
             }
         });
 
@@ -863,12 +865,13 @@ export default function App() {
             const categoryRef = findOrCreateRef('categorias', categoryName);
             const providerRef = findOrCreateRef('proveedores', providerName);
 
-            const pnStr = pn.toString();
-            const existingPart = currentCatalogMap.get(pnStr.toLowerCase());
+            const rawPn = String(pn);
+            const normalizedPn = rawPn.replace(/\s+/g, '').toUpperCase();
+            const existingPart = currentCatalogMap.get(normalizedPn);
 
             const partData = { 
-                name: String(name), 
-                partNumber: pnStr.toUpperCase(), 
+                name: String(name).trim(), 
+                partNumber: normalizedPn, 
                 lastPrice: Number(price) || 0, 
                 brand: brandRef, 
                 category: categoryRef, 
@@ -920,8 +923,8 @@ export default function App() {
     if (!partForm.name || !partForm.partNumber) return alert("Nombre y P/N obligatorios.");
     
     const data = {
-        name: partForm.name,
-        partNumber: partForm.partNumber,
+        name: String(partForm.name).trim(),
+        partNumber: String(partForm.partNumber).replace(/\s+/g, '').toUpperCase(),
         lastPrice: Number(partForm.lastPrice) || 0,
         brand: partForm.brand ? doc(db, 'marcas', partForm.brand) : null,
         category: partForm.category ? doc(db, 'categorias', partForm.category) : null,
@@ -941,8 +944,8 @@ export default function App() {
     if (!formData.name || !formData.partNumber) return alert("Nombre y P/N obligatorios.");
     
     const data = {
-        name: formData.name,
-        partNumber: formData.partNumber,
+        name: String(formData.name).trim(),
+        partNumber: String(formData.partNumber).replace(/\s+/g, '').toUpperCase(),
         lastPrice: Number(formData.lastPrice) || 0,
         brand: formData.brand ? doc(db, 'marcas', formData.brand) : null,
         category: formData.category ? doc(db, 'categorias', formData.category) : null,
