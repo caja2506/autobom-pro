@@ -606,8 +606,7 @@ export default function App() {
   const [isMasterRecordModalOpen, setIsMasterRecordModalOpen] = useState(false);
   const [editingMasterRecord, setEditingMasterRecord] = useState(null); // null = nuevo, objeto = editar
 
-  const [editingProjectId, setEditingProjectId] = useState(null);
-  const [editingCatalogId, setEditingCatalogId] = useState(null);
+  const [editingProjectId, setEditingProjectId] = useState(null); // Eliminar referencias a estados y manejadores locales antiguos (MasterRecordModal ahora maneja todo).
   const [editingBomItem, setEditingBomItem] = useState(null);
 
   // Estados de "Modo Edición" para las listas
@@ -619,7 +618,6 @@ export default function App() {
 
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
-  const [partForm, setPartForm] = useState({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
 
   // Estados para filtros - Ahora son ARRAYS para permitir múltiple selección
   const [catalogFilters, setCatalogFilters] = useState({ search: '', brand: [], category: [], provider: [] });
@@ -918,28 +916,7 @@ export default function App() {
     setIsProjectModalOpen(false); setNewProjectName(''); setNewProjectDesc(''); setEditingProjectId(null);
   };
 
-  const handleSavePart = async (e) => {
-    e.preventDefault();
-    if (!partForm.name || !partForm.partNumber) return alert("Nombre y P/N obligatorios.");
-
-    const data = {
-      name: String(partForm.name).trim(),
-      partNumber: String(partForm.partNumber).replace(/\s+/g, '').toUpperCase(),
-      lastPrice: Number(partForm.lastPrice) || 0,
-      brand: partForm.brand ? doc(db, 'marcas', partForm.brand) : null,
-      category: partForm.category ? doc(db, 'categorias', partForm.category) : null,
-      defaultProvider: partForm.defaultProvider ? doc(db, 'proveedores', partForm.defaultProvider) : null,
-    };
-
-    if (editingCatalogId) {
-      await updateDoc(doc(db, 'catalogo_maestro', editingCatalogId), data);
-    } else {
-      await setDoc(doc(collection(db, 'catalogo_maestro')), data);
-    }
-    setEditingCatalogId(null);
-    setPartForm({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
-  };
-
+  // Funciones obsoletas de formulario manual han sido delegadas al MasterRecordModal.
   const saveMasterRecord = async (formData) => {
     if (!formData.name || !formData.partNumber) return alert("Nombre y P/N obligatorios.");
 
@@ -999,13 +976,6 @@ export default function App() {
     });
 
     await batch.commit();
-
-    const list = managedLists[type === 'category' ? 'categories' : type + 's'] || [];
-    const currentFormValueId = partForm[fieldName];
-    const currentFormValueName = list.find(item => item.id === currentFormValueId)?.name;
-    if ([...renames.map(r => r.oldName), ...deleted].includes(currentFormValueName)) {
-      setPartForm(prev => ({ ...prev, [fieldName]: '' }));
-    }
   };
 
   const handleEditClick = (item) => {
