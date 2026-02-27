@@ -1,30 +1,14 @@
-# To learn more about how to use Nix to configure your environment
-# see: https://developers.google.com/idx/guides/customize-idx-env
 { pkgs, ... }: {
-  # Which nixpkgs channel to use.
-  channel = "stable-24.05"; # or "unstable"
-  # Use https://search.nixos.org/packages to find packages
+  channel = "stable-24.05";
   packages = [
-    pkgs.nodejs_22 # Use Node.js 22 to ensure compatibility
+    pkgs.nodejs_20
   ];
-  # Sets environment variables in the workspace
-  env = {};
   idx = {
-    # Search for the extensions you want on https://open-vsx.org/ and use "publisher.id"
     extensions = [
-      # "vscodevim.vim"
-      "google.gemini-cli-vscode-ide-companion"
+      "dsznajder.es7-react-js-snippets"
+      "bradlc.vscode-tailwindcss"
     ];
-    workspace = {
-      # Runs when a workspace is first created with this `dev.nix` file
-      onCreate = {
-        npm-install = "npm i --no-audit --no-progress --timing";
-        # Open editors for the following files by default, if they exist:
-        default.openFiles = [ "src/App.tsx" "src/App.ts" "src/App.jsx" "src/App.js" ];
-      };
-      # To run something each time the workspace is (re)started, use the `onStart` hook
-    };
-    # Enable previews and customize configuration
+    # Esto es lo que permite que se ejecute solo
     previews = {
       enable = true;
       previews = {
@@ -32,6 +16,11 @@
           command = ["npm" "run" "dev" "--" "--port" "$PORT" "--host" "0.0.0.0"];
           manager = "web";
         };
+      };
+    };
+    workspace = {
+      onCreate = {
+        npm-install = "npm install";
       };
     };
   };
