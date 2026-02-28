@@ -19,9 +19,10 @@ import ConfirmDialog from './components/ui/ConfirmDialog';
 import MasterRecordModal from './components/catalog/MasterRecordModal';
 import CatalogPickerModal from './components/catalog/CatalogPickerModal';
 import BomItemEditModal from './components/projects/BomItemEditModal';
+import PdfReviewModal from './components/projects/PdfReviewModal';
 
 // --- UTILIDADES ---
-import { normalizePartNumber } from './utils/normalizers';
+import { normalizePartNumber, findSimilarProviders } from './utils/normalizers';
 
 // --- LIBRERÍAS EXTERNAS (CDN) ---
 const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
@@ -37,7 +38,7 @@ const MODEL_NAME = "gemini-2.5-flash";
 // ========================================================
 // APLICACIÓN PRINCIPAL
 // ========================================================
-const APP_VERSION = "3.3";
+const APP_VERSION = "3.4";
 
 export default function App() {
   const [proyectos, setProyectos] = useState([]);
@@ -57,6 +58,11 @@ export default function App() {
   const [confirmDelete, setConfirmDelete] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
   const [listManager, setListManager] = useState({ isOpen: false, type: null, title: '' });
   const [catalogPickerOpen, setCatalogPickerOpen] = useState(false);
+
+  // Estado para el modal de revisión de PDF
+  const [isPdfReviewOpen, setIsPdfReviewOpen] = useState(false);
+  const [pdfReviewData, setPdfReviewData] = useState(null);
+  const [pdfSupplierAnalysis, setPdfSupplierAnalysis] = useState(null);
 
   // Nuevo estado para el modal de Master Record
   const [isMasterRecordModalOpen, setIsMasterRecordModalOpen] = useState(false);
@@ -178,49 +184,100 @@ export default function App() {
       const data = JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim());
 
       if (data.items) {
-        setProcessingStatus("Guardando en Firebase...");
-        const batch = writeBatch(db);
+        setProcessingStatus("Analizando datos...");
         const catalogSnapshot = await getDocs(collection(db, 'catalogo_maestro'));
         const currentCatalog = catalogSnapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-        let newSupplierId = null;
-        if (data.supplier) {
-          const existingProvider = managedLists.providers.find(p => p.name.toLowerCase() === data.supplier.toLowerCase());
-          if (existingProvider) newSupplierId = existingProvider.id;
-          else {
-            const newProviderRef = doc(collection(db, 'proveedores'));
-            batch.set(newProviderRef, { name: data.supplier });
-            newSupplierId = newProviderRef.id;
-          }
-        }
 
-        for (const item of data.items) {
-          const rawPn = String(item.pn || 'S/N');
-          const normalizedPn = rawPn.replace(/\s+/g, '').toUpperCase();
-          let part = currentCatalog.find(p => p.partNumber && p.partNumber.replace(/\s+/g, '').toUpperCase() === normalizedPn);
-          let partId = null;
-          if (!part) {
-            const catRef = doc(collection(db, 'catalogo_maestro'));
-            const newPartData = { name: String(item.description || '').trim(), partNumber: normalizedPn, lastPrice: Number(item.unitPrice) || 0, defaultProvider: newSupplierId ? doc(db, 'proveedores', newSupplierId) : null, brand: null, category: null };
-            batch.set(catRef, newPartData);
-            partId = catRef.id;
-          } else {
-            partId = part.id;
-            const updateData = { lastPrice: Number(item.unitPrice) };
-            if (newSupplierId) updateData.defaultProvider = doc(db, 'proveedores', newSupplierId);
-            batch.update(doc(db, 'catalogo_maestro', part.id), updateData);
-          }
-          const bomRef = doc(collection(db, 'items_bom'));
-          batch.set(bomRef, { projectId: activeProject.id, masterPartRef: doc(db, 'catalogo_maestro', partId), quantity: Number(item.quantity) || 1, unitPrice: Number(item.unitPrice) || 0, totalPrice: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0), proveedor: newSupplierId ? doc(db, 'proveedores', newSupplierId) : null, status: 'En Cotización', addedAt: new Date().toISOString() });
-        }
-        await batch.commit();
-        setProcessingStatus("✨ ¡Cotización cargada con éxito!");
-        setTimeout(() => setIsProcessing(false), 2500);
+        // Clasificar cada ítem como nuevo o existente
+        const reviewItems = data.items.map(item => {
+          const normalizedPn = normalizePartNumber(item.pn);
+          const existing = currentCatalog.find(p =>
+            p.partNumber && normalizePartNumber(p.partNumber) === normalizedPn
+          );
+          return {
+            pn: normalizedPn,
+            description: String(item.description || '').trim(),
+            quantity: Number(item.quantity) || 1,
+            unitPrice: Number(item.unitPrice) || 0,
+            isNew: !existing,
+            existingPartId: existing?.id || null,
+          };
+        });
+
+        // Analizar proveedor
+        const supplierAnalysis = findSimilarProviders(data.supplier, managedLists.providers);
+
+        // Abrir modal de revisión (NO guardar aún)
+        setPdfReviewData({ supplier: data.supplier || '', items: reviewItems });
+        setPdfSupplierAnalysis(supplierAnalysis);
+        setIsPdfReviewOpen(true);
+        setProcessingStatus("✅ Datos listos para revisión");
+        setTimeout(() => setIsProcessing(false), 1500);
       }
     } catch (err) {
       setLastError(err.message);
       setProcessingStatus("❌ ERROR");
       setIsProcessing(false);
+    } finally {
+      if (e?.target) e.target.value = null;
     }
+  };
+
+  // Función que se ejecuta cuando el usuario confirma la importación desde PdfReviewModal
+  const handleConfirmImport = async (reviewedData) => {
+    const { items, prcr, supplierDecision } = reviewedData;
+    if (items.length === 0) return;
+
+    const batch = writeBatch(db);
+
+    // 1. Resolver proveedor
+    let supplierId = null;
+    if (supplierDecision.action === 'use_existing' && supplierDecision.selectedProviderId) {
+      supplierId = supplierDecision.selectedProviderId;
+    } else if (supplierDecision.name) {
+      const newProviderRef = doc(collection(db, 'proveedores'));
+      batch.set(newProviderRef, { name: supplierDecision.name });
+      supplierId = newProviderRef.id;
+    }
+
+    // 2. Procesar cada ítem
+    for (const item of items) {
+      let partId;
+      if (item.isNew) {
+        const catRef = doc(collection(db, 'catalogo_maestro'));
+        batch.set(catRef, {
+          name: item.description,
+          partNumber: item.pn,
+          lastPrice: item.unitPrice,
+          defaultProvider: supplierId ? doc(db, 'proveedores', supplierId) : null,
+          brand: null, category: null
+        });
+        partId = catRef.id;
+      } else {
+        partId = item.existingPartId;
+        const updateData = { lastPrice: item.unitPrice };
+        if (supplierId) updateData.defaultProvider = doc(db, 'proveedores', supplierId);
+        batch.update(doc(db, 'catalogo_maestro', partId), updateData);
+      }
+
+      const bomRef = doc(collection(db, 'items_bom'));
+      batch.set(bomRef, {
+        projectId: activeProject.id,
+        masterPartRef: doc(db, 'catalogo_maestro', partId),
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.quantity * item.unitPrice,
+        proveedor: supplierId ? doc(db, 'proveedores', supplierId) : null,
+        prcr: prcr || '',
+        status: 'En Cotización',
+        addedAt: new Date().toISOString()
+      });
+    }
+
+    await batch.commit();
+    setIsPdfReviewOpen(false);
+    setPdfReviewData(null);
+    setPdfSupplierAnalysis(null);
   };
 
   const handleExcelUpload = async (e) => {
@@ -635,6 +692,14 @@ export default function App() {
           onAddItems={handleAddFromCatalog}
         />
       )}
+
+      <PdfReviewModal
+        isOpen={isPdfReviewOpen}
+        onClose={() => { setIsPdfReviewOpen(false); setPdfReviewData(null); setPdfSupplierAnalysis(null); }}
+        onConfirm={handleConfirmImport}
+        extractedData={pdfReviewData}
+        supplierAnalysis={pdfSupplierAnalysis}
+      />
 
       <ConfirmDialog
         isOpen={confirmDelete.isOpen}
