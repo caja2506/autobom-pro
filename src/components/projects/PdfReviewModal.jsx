@@ -208,6 +208,7 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                                     <th className="p-4">P/N</th>
                                     <th className="p-4">Descripción</th>
                                     <th className="p-4 w-16 text-center">Cant</th>
+                                    <th className="p-4 w-20 text-center">⏱️ Lead</th>
                                     <th className="p-4 w-28 text-right">Precio U.</th>
                                     <th className="p-4 w-28 text-right">Total</th>
                                 </tr>
@@ -236,6 +237,9 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                                         <td className="p-4 font-mono font-bold text-xs text-slate-600">{item.pn}</td>
                                         <td className="p-4 font-bold text-slate-800 leading-tight text-sm">{item.description}</td>
                                         <td className="p-4 text-center font-black text-slate-700">{item.quantity}</td>
+                                        <td className="p-4 text-center">
+                                            {item.leadTimeWeeks != null ? <span className="text-sm font-bold text-teal-700">{item.leadTimeWeeks} sem</span> : <span className="text-slate-300 text-xs">—</span>}
+                                        </td>
                                         <td className="p-4 text-right font-bold text-slate-600">${(item.unitPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                         <td className="p-4 text-right font-black text-green-700">${((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                     </tr>

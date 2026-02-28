@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Database, X, Plus, Loader2 } from 'lucide-react';
+import { Database, X, Plus, Loader2, Clock } from 'lucide-react';
 import SearchableDropdown from '../ui/SearchableDropdown';
 
 // ========================================================
 // COMPONENTE: MODAL DE REGISTRO MAESTRO (CREAR/EDITAR)
 // ========================================================
 const MasterRecordModal = ({ isOpen, onClose, onSave, initialData, managedLists, onOpenManager }) => {
-    const [formData, setFormData] = useState({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
+    const [formData, setFormData] = useState({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '', leadTimeWeeks: '' });
     const [isSaving, setIsSaving] = useState(false);
 
     // Opciones para filtros dentro del modal
@@ -23,10 +23,11 @@ const MasterRecordModal = ({ isOpen, onClose, onSave, initialData, managedLists,
                     lastPrice: initialData.lastPrice || 0,
                     defaultProvider: initialData.defaultProvider?.id || '',
                     category: initialData.category?.id || '',
-                    brand: initialData.brand?.id || ''
+                    brand: initialData.brand?.id || '',
+                    leadTimeWeeks: initialData.leadTimeWeeks ?? ''
                 });
             } else {
-                setFormData({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '' });
+                setFormData({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '', leadTimeWeeks: '' });
             }
         }
     }, [isOpen, initialData]);
@@ -67,6 +68,10 @@ const MasterRecordModal = ({ isOpen, onClose, onSave, initialData, managedLists,
                         <div className="flex items-center gap-2">
                             <div className="flex-grow"><SearchableDropdown options={providerOptions} value={formData.defaultProvider} onChange={val => setFormData({ ...formData, defaultProvider: val })} placeholder="🚚 Proveedor..." /></div>
                             <button type="button" onClick={() => onOpenManager('provider')} className="p-3.5 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-all"><Plus className="w-5 h-5" /></button>
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1 flex items-center"><Clock className="w-3.5 h-3.5 mr-1" /> Lead Time (semanas)</label>
+                            <input type="number" min="1" step="1" value={formData.leadTimeWeeks} onChange={e => setFormData({ ...formData, leadTimeWeeks: e.target.value })} placeholder="Ej: 4" className="w-full p-3.5 border border-teal-100 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-teal-500" />
                         </div>
                     </div>
                     <button type="submit" disabled={isSaving} className={`w-full p-4 text-white rounded-2xl font-black shadow-lg transition-all ${initialData ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-900 hover:bg-black'}`}>

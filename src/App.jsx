@@ -83,7 +83,7 @@ export default function App() {
 
   // Estados para filtros - Ahora son ARRAYS para permitir múltiple selección
   const [catalogFilters, setCatalogFilters] = useState({ search: '', brand: [], category: [], provider: [] });
-  const [bomFilters, setBomFilters] = useState({ search: '', brand: [], category: [], provider: [] });
+  const [bomFilters, setBomFilters] = useState({ search: '', brand: [], category: [], provider: [], prcr: '' });
 
   const pdfInputRef = useRef(null);
   const excelInputRef = useRef(null);
@@ -120,7 +120,7 @@ export default function App() {
   // Reset selections when changing project or tab
   useEffect(() => {
     setSelectedBomItems([]);
-    setBomFilters({ search: '', brand: [], category: [], provider: [] });
+    setBomFilters({ search: '', brand: [], category: [], provider: [], prcr: '' });
     setIsBomEditMode(false);
   }, [activeProject, activeTab]);
 
@@ -168,7 +168,7 @@ export default function App() {
       if (!text.trim()) throw new Error("No pudimos extraer texto de este PDF.");
 
       setProcessingStatus(`Enviando texto a ${MODEL_NAME}...`);
-      const prompt = `Analiza el texto de una cotización. Extrae los datos y devuelve EXCLUSIVAMENTE un JSON estricto con la siguiente estructura: { "supplier": "Nombre Proveedor", "items": [ { "pn": "Número de parte", "description": "Descripción", "quantity": numero, "unitPrice": numero } ] }.\nReglas:\n1. Ignora texto irrelevante, encabezados o textos legales.\n2. Los pn (Part Number) deben estar en MAYÚSCULAS y resolverse sin espacios.\n3. description debe ser concisa, técnica y resumida.\n4. quantity y unitPrice deben ser numéricos (usa 0 si falta el dato).\n5. Si no hay proveedor, usa "".\nDevuelve SOLO el JSON sin delimitadores markdown.\n\nTexto:\n\n${text}`;
+      const prompt = `Analiza el texto de una cotización. Extrae los datos y devuelve EXCLUSIVAMENTE un JSON estricto con la siguiente estructura: { "supplier": "Nombre Proveedor", "items": [ { "pn": "Número de parte", "description": "Descripción", "quantity": numero, "unitPrice": numero, "leadTimeWeeks": numero } ] }.\nReglas:\n1. Ignora texto irrelevante, encabezados o textos legales.\n2. Los pn (Part Number) deben estar en MAYÚSCULAS y resolverse sin espacios.\n3. description debe ser concisa, técnica y resumida.\n4. quantity y unitPrice deben ser numéricos (usa 0 si falta el dato).\n5. Si no hay proveedor, usa "".\n6. leadTimeWeeks es el tiempo de entrega en SEMANAS. Si dice días, convierte dividiendo entre 7 y redondeando hacia arriba (mínimo 1). Si no se menciona, usa null.\n7. Busca frases como "lead time", "tiempo de entrega", "delivery", "plazo", "semanas", "weeks", "días", "days".\nDevuelve SOLO el JSON sin delimitadores markdown.\n\nTexto:\n\n${text}`;
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,6 +199,7 @@ export default function App() {
             description: String(item.description || '').trim(),
             quantity: Number(item.quantity) || 1,
             unitPrice: Number(item.unitPrice) || 0,
+            leadTimeWeeks: item.leadTimeWeeks != null ? Number(item.leadTimeWeeks) : null,
             isNew: !existing,
             existingPartId: existing?.id || null,
           };
@@ -249,6 +250,7 @@ export default function App() {
           name: item.description,
           partNumber: item.pn,
           lastPrice: item.unitPrice,
+          leadTimeWeeks: item.leadTimeWeeks,
           defaultProvider: supplierId ? doc(db, 'proveedores', supplierId) : null,
           brand: null, category: null
         });
@@ -256,6 +258,7 @@ export default function App() {
       } else {
         partId = item.existingPartId;
         const updateData = { lastPrice: item.unitPrice };
+        if (item.leadTimeWeeks != null) updateData.leadTimeWeeks = item.leadTimeWeeks;
         if (supplierId) updateData.defaultProvider = doc(db, 'proveedores', supplierId);
         batch.update(doc(db, 'catalogo_maestro', partId), updateData);
       }
@@ -267,6 +270,7 @@ export default function App() {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         totalPrice: item.quantity * item.unitPrice,
+        leadTimeWeeks: item.leadTimeWeeks,
         proveedor: supplierId ? doc(db, 'proveedores', supplierId) : null,
         prcr: prcr || '',
         status: 'En Cotización',
@@ -440,6 +444,7 @@ export default function App() {
       brand: formData.brand ? doc(db, 'marcas', formData.brand) : null,
       category: formData.category ? doc(db, 'categorias', formData.category) : null,
       defaultProvider: formData.defaultProvider ? doc(db, 'proveedores', formData.defaultProvider) : null,
+      leadTimeWeeks: formData.leadTimeWeeks === '' ? null : Number(formData.leadTimeWeeks),
     };
 
     if (editingMasterRecord) {
@@ -527,14 +532,22 @@ export default function App() {
     });
   }
 
-  const handleUpdateBomItem = async (itemId, updatedData) => {
+  const handleUpdateBomItem = async (itemId, updatedData, catalogLeadTimeUpdate) => {
     const itemRef = doc(db, 'items_bom', itemId);
     const newData = {
       ...updatedData,
       totalPrice: (updatedData.quantity || 0) * (updatedData.unitPrice || 0)
     };
     await updateDoc(itemRef, newData);
-    setEditingBomItem(null); // Close modal
+
+    // Si el usuario pidió actualizar el lead time del catálogo
+    if (catalogLeadTimeUpdate !== undefined) {
+      const bomItem = bomItems.find(i => i.id === itemId);
+      if (bomItem?.masterPartRef) {
+        await updateDoc(doc(db, 'catalogo_maestro', bomItem.masterPartRef.id), { leadTimeWeeks: catalogLeadTimeUpdate });
+      }
+    }
+    setEditingBomItem(null);
   };
 
   const handleAddFromCatalog = async (itemsToAdd) => {
@@ -639,8 +652,9 @@ export default function App() {
       const matchesBrand = bomFilters.brand.length === 0 || bomFilters.brand.includes(details.brandId);
       const matchesCategory = bomFilters.category.length === 0 || bomFilters.category.includes(details.categoryId);
       const matchesProvider = bomFilters.provider.length === 0 || bomFilters.provider.includes(details.providerId);
+      const matchesPrcr = !bomFilters.prcr || (item.prcr || '') === bomFilters.prcr;
 
-      return matchesSearch && matchesBrand && matchesCategory && matchesProvider;
+      return matchesSearch && matchesBrand && matchesCategory && matchesProvider && matchesPrcr;
     });
   }, [activeBomItems, catalogo, bomFilters]);
 
@@ -673,7 +687,7 @@ export default function App() {
 
       {listManager.isOpen && <ListManagerModal title={listManager.title} items={managedLists[listManager.type === 'category' ? 'categories' : listManager.type + 's']?.map(i => i.name) || []} onClose={() => setListManager({ isOpen: false, type: null, title: '' })} onSave={(data) => handleSaveManagedList({ type: listManager.type, data })} />}
 
-      {editingBomItem && <BomItemEditModal item={editingBomItem} onClose={() => setEditingBomItem(null)} onSave={handleUpdateBomItem} />}
+      {editingBomItem && <BomItemEditModal item={editingBomItem} onClose={() => setEditingBomItem(null)} onSave={handleUpdateBomItem} catalogLeadTime={editingBomItem?.masterPartRef ? catalogo.find(p => p.id === editingBomItem.masterPartRef.id)?.leadTimeWeeks : null} />}
 
       <MasterRecordModal
         isOpen={isMasterRecordModalOpen}
@@ -812,6 +826,13 @@ export default function App() {
                       providers: providerOptions
                     }}
                   />
+                  {(() => {
+                    const pcrValues = [...new Set(activeBomItems.map(i => i.prcr).filter(Boolean))];
+                    if (pcrValues.length > 0) return (
+                      <SearchableDropdown compact options={[{ value: '', label: 'Todos los PRCR' }, ...pcrValues.map(p => ({ value: p, label: p }))]} value={bomFilters.prcr} onChange={val => setBomFilters({ ...bomFilters, prcr: val })} placeholder="#PRCR" />
+                    );
+                    return null;
+                  })()}
                   <button
                     onClick={() => { setIsBomEditMode(!isBomEditMode); setSelectedBomItems([]); }}
                     className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isBomEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
@@ -838,6 +859,8 @@ export default function App() {
                         <th className="p-5 w-20 text-center">Visual</th>
                         <th className="p-5 w-16">Cant</th>
                         <th className="p-5">Descripción del Ítem</th>
+                        <th className="p-5 w-28">#PRCR</th>
+                        <th className="p-5 w-24 text-center">⏱️ Lead</th>
                         <th className="p-5 text-right">Costo</th>
                         {isBomEditMode && <th className="p-5 text-center w-28">Acciones</th>}
                       </tr>
@@ -872,6 +895,20 @@ export default function App() {
                                 {details.categoryName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-purple-600 bg-purple-50 border-purple-100"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0" />{details.categoryName}</div>}
                                 {providerName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-indigo-500 bg-indigo-50 border-indigo-100">Prov: {providerName}</div>}
                               </div>
+                            </td>
+                            <td className="p-5">
+                              {item.prcr ? <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold font-mono">{item.prcr}</span> : <span className="text-slate-300 text-xs">—</span>}
+                            </td>
+                            <td className="p-5 text-center">
+                              {(() => {
+                                const masterPart = item.masterPartRef ? catalogo.find(p => p.id === item.masterPartRef.id) : null;
+                                const catalogLT = masterPart?.leadTimeWeeks;
+                                const bomLT = item.leadTimeWeeks;
+                                const changed = bomLT != null && catalogLT != null && bomLT !== catalogLT;
+                                if (bomLT != null) return <span className="text-sm font-bold text-teal-700">{bomLT} sem {changed && <span title={`Catálogo: ${catalogLT} sem`} className="text-amber-500 cursor-help">⚡</span>}</span>;
+                                if (catalogLT != null) return <span className="text-sm text-slate-400">{catalogLT} sem</span>;
+                                return <span className="text-slate-300 text-xs">—</span>;
+                              })()}
                             </td>
                             <td className="p-5 text-right">
                               <div className="font-black text-slate-900 text-lg">${(item.totalPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
@@ -946,6 +983,7 @@ export default function App() {
                     <tr>
                       {isCatalogEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllCatalog(filteredCatalogo)} checked={selectedCatalogItems.length === filteredCatalogo.length && filteredCatalogo.length > 0} /></th>}
                       <th className="p-5">Pieza</th>
+                      <th className="p-5 w-24 text-center">⏱️ Lead</th>
                       <th className="p-5 text-right">Precio Base</th>
                       {isCatalogEditMode && <th className="p-5 text-center">⚙️</th>}
                     </tr>
@@ -965,6 +1003,9 @@ export default function App() {
                               {brandName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-gray-600 bg-gray-100 border-gray-200"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0" />{brandName}</div>}
                               {categoryName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-purple-600 bg-purple-50 border-purple-100"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0" />{categoryName}</div>}
                             </div>
+                          </td>
+                          <td className="p-5 text-center">
+                            {item.leadTimeWeeks != null ? <span className="text-sm font-bold text-teal-700">{item.leadTimeWeeks} sem</span> : <span className="text-slate-300 text-xs">—</span>}
                           </td>
                           <td className="p-5 text-right font-black text-green-700 text-lg">${(item.lastPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                           {isCatalogEditMode && (
