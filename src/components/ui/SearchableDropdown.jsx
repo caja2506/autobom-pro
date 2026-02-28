@@ -20,7 +20,9 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, dark = fals
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const filteredOptions = options.filter(opt =>
+    const safeOptions = Array.isArray(options) ? options : [];
+
+    const filteredOptions = safeOptions.filter(opt =>
         opt.label.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -28,12 +30,12 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, dark = fals
         if (multiple) {
             if (!value || value.length === 0) return placeholder;
             if (value.length === 1) {
-                const found = options.find(o => o.value === value[0]);
+                const found = safeOptions.find(o => o.value === value[0]);
                 return found ? found.label : placeholder;
             }
             return `${value.length} seleccionados`;
         }
-        const selectedOption = options.find(opt => opt.value === value);
+        const selectedOption = safeOptions.find(opt => opt.value === value);
         return selectedOption ? selectedOption.label : placeholder;
     };
 

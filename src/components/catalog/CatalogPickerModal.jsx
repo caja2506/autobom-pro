@@ -18,8 +18,8 @@ const CatalogPickerModal = ({ onClose, catalogo, managedLists, onAddItems }) => 
     const filteredCatalog = useMemo(() => {
         return catalogo.filter(item => {
             const matchesSearch = !filters.search ||
-                (item.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
-                (item.partNumber || '').toLowerCase().includes(filters.search.toLowerCase());
+                String(item.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+                String(item.partNumber || '').toLowerCase().includes(filters.search.toLowerCase());
 
             const matchesBrand = !filters.brand || item.brand?.id === filters.brand;
             const matchesCategory = !filters.category || item.category?.id === filters.category;

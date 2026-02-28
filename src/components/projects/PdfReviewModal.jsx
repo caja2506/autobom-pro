@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Check, Sparkles, AlertTriangle, PackagePlus, Loader2, Hash } from 'lucide-react';
 
 // ========================================================
@@ -6,24 +6,43 @@ import { X, Check, Sparkles, AlertTriangle, PackagePlus, Loader2, Hash } from 'l
 // ========================================================
 const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAnalysis }) => {
     // Estado de cada ítem (seleccionado o no)
-    const [items, setItems] = useState(() =>
-        (extractedData?.items || []).map((item, idx) => ({ ...item, isSelected: true, id: `review-${idx}` }))
-    );
+    const [items, setItems] = useState([]);
 
     // PRCR único para toda la cotización
     const [prcr, setPrcr] = useState('');
 
     // Decisión del proveedor
-    const [supplierAction, setSupplierAction] = useState(
-        supplierAnalysis?.exactMatch ? 'use_existing' :
-            supplierAnalysis?.similarMatches?.length > 0 ? 'use_existing' : 'create_new'
-    );
-    const [selectedSimilarId, setSelectedSimilarId] = useState(
-        supplierAnalysis?.exactMatch?.id ||
-        supplierAnalysis?.similarMatches?.[0]?.id || null
-    );
+    const [supplierAction, setSupplierAction] = useState('create_new');
+    const [selectedSimilarId, setSelectedSimilarId] = useState(null);
 
     const [isConfirming, setIsConfirming] = useState(false);
+
+    // Sincronizar estado cuando se abren nuevos datos
+    useEffect(() => {
+        if (isOpen && extractedData?.items) {
+            setItems(extractedData.items.map((item, idx) => ({
+                ...item, isSelected: true, id: `review-${idx}`
+            })));
+            setPrcr('');
+            setIsConfirming(false);
+        }
+    }, [isOpen, extractedData]);
+
+    // Sincronizar decisión de proveedor
+    useEffect(() => {
+        if (isOpen && supplierAnalysis) {
+            if (supplierAnalysis.exactMatch) {
+                setSupplierAction('use_existing');
+                setSelectedSimilarId(supplierAnalysis.exactMatch.id);
+            } else if (supplierAnalysis.similarMatches?.length > 0) {
+                setSupplierAction('use_existing');
+                setSelectedSimilarId(supplierAnalysis.similarMatches[0].id);
+            } else {
+                setSupplierAction('create_new');
+                setSelectedSimilarId(null);
+            }
+        }
+    }, [isOpen, supplierAnalysis]);
 
     // Contadores
     const stats = useMemo(() => {

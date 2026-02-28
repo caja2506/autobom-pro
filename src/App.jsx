@@ -600,7 +600,7 @@ export default function App() {
       const providerId = item.defaultProvider?.id || '';
       const s = catalogFilters.search.toLowerCase();
 
-      const matchesSearch = !s || (item.name || '').toLowerCase().includes(s) || (item.partNumber || '').toLowerCase().includes(s);
+      const matchesSearch = !s || String(item.name || '').toLowerCase().includes(s) || String(item.partNumber || '').toLowerCase().includes(s);
       const matchesBrand = catalogFilters.brand.length === 0 || catalogFilters.brand.includes(brandId);
       const matchesCategory = catalogFilters.category.length === 0 || catalogFilters.category.includes(categoryId);
       const matchesProvider = catalogFilters.provider.length === 0 || catalogFilters.provider.includes(providerId);
@@ -634,7 +634,7 @@ export default function App() {
       }
 
       const s = bomFilters.search.toLowerCase();
-      const matchesSearch = !s || (details.name || '').toLowerCase().includes(s) || (details.partNumber || '').toLowerCase().includes(s);
+      const matchesSearch = !s || String(details.name || '').toLowerCase().includes(s) || String(details.partNumber || '').toLowerCase().includes(s);
 
       const matchesBrand = bomFilters.brand.length === 0 || bomFilters.brand.includes(details.brandId);
       const matchesCategory = bomFilters.category.length === 0 || bomFilters.category.includes(details.categoryId);
