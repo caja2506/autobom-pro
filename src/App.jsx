@@ -845,15 +845,15 @@ export default function App() {
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight">{activeProject.name}</h2>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <button onClick={() => setCatalogPickerOpen(true)} className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all text-sm">
-                    <PackagePlus className="w-4 h-4 mr-1.5" /> Catálogo
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <button onClick={() => setCatalogPickerOpen(true)} className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3.5 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all text-sm">
+                    <PackagePlus className="w-5 h-5 mr-2" /> <span className="hidden sm:inline">Desde </span>Catálogo
                   </button>
                   <div className="relative flex-1 sm:flex-none">
                     <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} accept=".pdf" className="hidden" />
-                    <button onClick={() => pdfInputRef.current.click()} disabled={isProcessing} className="w-full bg-slate-900 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all disabled:bg-slate-400 text-sm">
-                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Sparkles className="w-4 h-4 mr-1.5 text-yellow-400 fill-yellow-400" />}
-                      {isProcessing ? "..." : 'PDF'}
+                    <button onClick={() => pdfInputRef.current.click()} disabled={isProcessing} className="w-full bg-slate-900 text-white px-5 py-3.5 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all disabled:bg-slate-400 text-sm">
+                      {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2 text-yellow-400 fill-yellow-400" />}
+                      {isProcessing ? "Procesando..." : <><span className="hidden sm:inline">Importar </span>PDF</>}
                     </button>
                   </div>
                 </div>
