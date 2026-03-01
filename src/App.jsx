@@ -939,7 +939,7 @@ export default function App() {
                     <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 z-10">
                       <tr>
                         {isBomEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllBomItems(filteredActiveBomItems)} checked={filteredActiveBomItems.length > 0 && selectedBomItems.length === filteredActiveBomItems.length} /></th>}
-                        <th className="p-5 w-20 text-center">Visual</th>
+                        <th className="p-5 w-24 text-center">Visual</th>
                         <th className="p-5 w-16">Cant</th>
                         <th className="p-5">Descripción del Ítem</th>
                         <th className="p-5 w-28">#PRCR</th>
@@ -971,19 +971,19 @@ export default function App() {
                                 return (
                                   <button
                                     onClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })}
-                                    className="w-12 h-12 mx-auto rounded-xl overflow-hidden border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex items-center justify-center group relative"
+                                    className="w-16 h-16 mx-auto rounded-xl overflow-hidden border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex items-center justify-center group relative"
                                     title="Buscar imagen"
                                   >
                                     {imgUrl ? (
                                       <>
                                         <img src={imgUrl} alt="" className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                                        <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center"><Camera className="w-4 h-4 text-slate-300" /></div>
+                                        <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center"><Camera className="w-5 h-5 text-slate-300" /></div>
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                          <Camera className="w-4 h-4 text-white" />
+                                          <Camera className="w-5 h-5 text-white" />
                                         </div>
                                       </>
                                     ) : (
-                                      <Camera className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                      <Camera className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 transition-colors" />
                                     )}
                                   </button>
                                 );
@@ -1085,7 +1085,7 @@ export default function App() {
                   <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
                     <tr>
                       {isCatalogEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllCatalog(filteredCatalogo)} checked={selectedCatalogItems.length === filteredCatalogo.length && filteredCatalogo.length > 0} /></th>}
-                      <th className="p-5 w-14"></th>
+                      <th className="p-5 w-20"></th>
                       <th className="p-5">Pieza</th>
                       <th className="p-5 w-24 text-center">⏱️ Lead</th>
                       <th className="p-5 text-right">Precio Base</th>
@@ -1103,19 +1103,19 @@ export default function App() {
                           <td className="p-3">
                             <button
                               onClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })}
-                              className="w-10 h-10 rounded-lg overflow-hidden border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex items-center justify-center relative group"
+                              className="w-14 h-14 rounded-xl overflow-hidden border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex items-center justify-center relative group"
                               title="Buscar imagen"
                             >
                               {item.imageUrl ? (
                                 <>
                                   <img src={item.imageUrl} alt="" className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                                  <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center"><Camera className="w-3 h-3 text-slate-300" /></div>
+                                  <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center"><Camera className="w-5 h-5 text-slate-300" /></div>
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Camera className="w-3 h-3 text-white" />
+                                    <Camera className="w-5 h-5 text-white" />
                                   </div>
                                 </>
                               ) : (
-                                <Camera className="w-3 h-3 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                <Camera className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 transition-colors" />
                               )}
                             </button>
                           </td>
