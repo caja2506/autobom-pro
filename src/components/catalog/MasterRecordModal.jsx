@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Database, X, Plus, Loader2, Clock } from 'lucide-react';
+import { Database, X, Plus, Loader2, Clock, Image as ImageIcon } from 'lucide-react';
 import SearchableDropdown from '../ui/SearchableDropdown';
 
 // ========================================================
 // COMPONENTE: MODAL DE REGISTRO MAESTRO (CREAR/EDITAR)
 // ========================================================
 const MasterRecordModal = ({ isOpen, onClose, onSave, initialData, managedLists, onOpenManager }) => {
-    const [formData, setFormData] = useState({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '', leadTimeWeeks: '' });
+    const [formData, setFormData] = useState({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '', leadTimeWeeks: '', imageUrl: '' });
     const [isSaving, setIsSaving] = useState(false);
 
     // Opciones para filtros dentro del modal
@@ -24,10 +24,11 @@ const MasterRecordModal = ({ isOpen, onClose, onSave, initialData, managedLists,
                     defaultProvider: initialData.defaultProvider?.id || '',
                     category: initialData.category?.id || '',
                     brand: initialData.brand?.id || '',
-                    leadTimeWeeks: initialData.leadTimeWeeks ?? ''
+                    leadTimeWeeks: initialData.leadTimeWeeks ?? '',
+                    imageUrl: initialData.imageUrl || ''
                 });
             } else {
-                setFormData({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '', leadTimeWeeks: '' });
+                setFormData({ name: '', partNumber: '', lastPrice: '', defaultProvider: '', category: '', brand: '', leadTimeWeeks: '', imageUrl: '' });
             }
         }
     }, [isOpen, initialData]);
@@ -72,6 +73,10 @@ const MasterRecordModal = ({ isOpen, onClose, onSave, initialData, managedLists,
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1 flex items-center"><Clock className="w-3.5 h-3.5 mr-1" /> Lead Time (semanas)</label>
                             <input type="number" min="1" step="1" value={formData.leadTimeWeeks} onChange={e => setFormData({ ...formData, leadTimeWeeks: e.target.value })} placeholder="Ej: 4" className="w-full p-3.5 border border-teal-100 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-teal-500" />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-400 uppercase ml-1 mb-1 flex items-center"><ImageIcon className="w-3.5 h-3.5 mr-1" /> URL de Imagen</label>
+                            <input type="url" value={formData.imageUrl} onChange={e => setFormData({ ...formData, imageUrl: e.target.value })} placeholder="https://ejemplo.com/imagen.jpg" className="w-full p-3.5 border border-indigo-100 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500" />
                         </div>
                     </div>
                     <button type="submit" disabled={isSaving} className={`w-full p-4 text-white rounded-2xl font-black shadow-lg transition-all ${initialData ? 'bg-amber-500 hover:bg-amber-600' : 'bg-slate-900 hover:bg-black'}`}>
