@@ -4,7 +4,7 @@ import {
   ChevronRight, DollarSign, ArrowLeft,
   PackagePlus, X, BrainCircuit,
   Loader2, Sparkles, Activity, Tag,
-  SlidersHorizontal, Edit3, Truck, LayoutList
+  SlidersHorizontal, Edit3, Truck, LayoutList, Camera
 } from 'lucide-react';
 
 // --- FIREBASE ---
@@ -20,6 +20,7 @@ import MasterRecordModal from './components/catalog/MasterRecordModal';
 import CatalogPickerModal from './components/catalog/CatalogPickerModal';
 import BomItemEditModal from './components/projects/BomItemEditModal';
 import PdfReviewModal from './components/projects/PdfReviewModal';
+import ImagePickerModal from './components/catalog/ImagePickerModal';
 
 // --- UTILIDADES ---
 import { normalizePartNumber, findSimilarProviders } from './utils/normalizers';
@@ -68,8 +69,9 @@ export default function App() {
   const [isMasterRecordModalOpen, setIsMasterRecordModalOpen] = useState(false);
   const [editingMasterRecord, setEditingMasterRecord] = useState(null); // null = nuevo, objeto = editar
 
-  const [editingProjectId, setEditingProjectId] = useState(null); // Eliminar referencias a estados y manejadores locales antiguos (MasterRecordModal ahora maneja todo).
+  const [editingProjectId, setEditingProjectId] = useState(null);
   const [editingBomItem, setEditingBomItem] = useState(null);
+  const [imagePickerItem, setImagePickerItem] = useState(null); // { id, name, partNumber, collection }
 
   // Estados de "Modo Edición" para las listas
   const [isBomEditMode, setIsBomEditMode] = useState(false);
@@ -501,6 +503,16 @@ export default function App() {
     setIsMasterRecordModalOpen(true);
   };
 
+  const handleImageSelect = async (url) => {
+    if (!imagePickerItem) return;
+    try {
+      await updateDoc(doc(db, 'catalogo_maestro', imagePickerItem.id), { imageUrl: url });
+    } catch (err) {
+      console.error('Error saving image:', err);
+    }
+    setImagePickerItem(null);
+  };
+
   //--- Handlers for BOM item selection ---
   const handleToggleSelectAllBomItems = (items) => {
     if (selectedBomItems.length === items.length) {
@@ -721,6 +733,14 @@ export default function App() {
         message={confirmDelete.message}
         onConfirm={confirmDelete.onConfirm}
         onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null })}
+      />
+
+      <ImagePickerModal
+        isOpen={!!imagePickerItem}
+        onClose={() => setImagePickerItem(null)}
+        onSelect={handleImageSelect}
+        itemName={imagePickerItem?.name}
+        partNumber={imagePickerItem?.partNumber}
       />
 
       {/* ===== SIDEBAR (Desktop) / BOTTOM NAV (Mobile) ===== */}
@@ -945,9 +965,29 @@ export default function App() {
                           <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50/50'}`}>
                             {isBomEditMode && <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectBomItem(item.id)} /></td>}
                             <td className="p-5 text-center">
-                              <div className="w-12 h-12 mx-auto rounded-full bg-slate-200 overflow-hidden border border-slate-300 shadow-inner flex items-center justify-center">
-                                <span className="text-slate-400 text-[10px] font-bold"> IMG </span>
-                              </div>
+                              {(() => {
+                                const masterPart = item.masterPartRef ? catalogo.find(p => p.id === item.masterPartRef.id) : null;
+                                const imgUrl = masterPart?.imageUrl;
+                                return (
+                                  <button
+                                    onClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })}
+                                    className="w-12 h-12 mx-auto rounded-xl overflow-hidden border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex items-center justify-center group relative"
+                                    title="Buscar imagen"
+                                  >
+                                    {imgUrl ? (
+                                      <>
+                                        <img src={imgUrl} alt="" className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                                        <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center"><Camera className="w-4 h-4 text-slate-300" /></div>
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                          <Camera className="w-4 h-4 text-white" />
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <Camera className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                    )}
+                                  </button>
+                                );
+                              })()}
                             </td>
                             <td className="p-5 font-black text-lg text-slate-700">{item.quantity}</td>
                             <td className="p-5">
@@ -1045,6 +1085,7 @@ export default function App() {
                   <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
                     <tr>
                       {isCatalogEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllCatalog(filteredCatalogo)} checked={selectedCatalogItems.length === filteredCatalogo.length && filteredCatalogo.length > 0} /></th>}
+                      <th className="p-5 w-14"></th>
                       <th className="p-5">Pieza</th>
                       <th className="p-5 w-24 text-center">⏱️ Lead</th>
                       <th className="p-5 text-right">Precio Base</th>
@@ -1059,6 +1100,25 @@ export default function App() {
                       return (
                         <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
                           {isCatalogEditMode && <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectCatalogItem(item.id)} /></td>}
+                          <td className="p-3">
+                            <button
+                              onClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })}
+                              className="w-10 h-10 rounded-lg overflow-hidden border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex items-center justify-center relative group"
+                              title="Buscar imagen"
+                            >
+                              {item.imageUrl ? (
+                                <>
+                                  <img src={item.imageUrl} alt="" className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                                  <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center"><Camera className="w-3 h-3 text-slate-300" /></div>
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <Camera className="w-3 h-3 text-white" />
+                                  </div>
+                                </>
+                              ) : (
+                                <Camera className="w-3 h-3 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                              )}
+                            </button>
+                          </td>
                           <td className="p-5">
                             <div className="font-bold text-slate-800 text-base leading-tight">{item.name || 'Sin nombre'}</div>
                             <div className="text-[10px] font-mono text-slate-500 mt-1">{item.partNumber}</div>
