@@ -940,7 +940,7 @@ export default function App() {
                     <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 z-10">
                       <tr>
                         {isBomEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllBomItems(filteredActiveBomItems)} checked={filteredActiveBomItems.length > 0 && selectedBomItems.length === filteredActiveBomItems.length} /></th>}
-                        <th className="p-5 w-24 text-center">Visual</th>
+                        <th className="p-5 w-32 text-center">Visual</th>
                         <th className="p-5 w-16">Cant</th>
                         <th className="p-5">Descripción del Ítem</th>
                         <th className="p-5 w-28">#PRCR</th>
@@ -971,7 +971,7 @@ export default function App() {
                                 const imgUrl = masterPart?.imageUrl;
                                 const isZoomed = zoomedImageId === item.id;
                                 return (
-                                  <div className="w-20 h-20 mx-auto relative z-0">
+                                  <div className="w-[120px] h-[120px] mx-auto relative z-0" onDoubleClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })} title="Doble clic para cambiar">
                                     {imgUrl ? (
                                       <>
                                         <img
@@ -983,13 +983,6 @@ export default function App() {
                                         />
                                         <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
                                         {isZoomed && <div className="fixed inset-0 z-[50]" onClick={() => setZoomedImageId(null)}></div>}
-                                        <button
-                                          onClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })}
-                                          className={`absolute -bottom-2 -right-2 bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 rounded-full p-2 transition-all ${isZoomed ? 'z-[70] scale-125 translate-x-1 translate-y-1 shadow-lg' : 'z-10'}`}
-                                          title="Actualizar imagen"
-                                        >
-                                          <Camera className="w-4 h-4" />
-                                        </button>
                                       </>
                                     ) : (
                                       <button
@@ -1032,14 +1025,16 @@ export default function App() {
                               <div className="font-black text-slate-900 text-lg">${(item.totalPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                               <div className="text-[10px] text-slate-400">${item.unitPrice}/u</div>
                             </td>
-                            {isBomEditMode && (
-                              <td className="p-5 text-center">
-                                <div className='flex justify-center items-center gap-2'>
-                                  <button onClick={() => setEditingBomItem(item)} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4" /></button>
-                                  <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4" /></button>
-                                </div>
-                              </td>
-                            )}
+                            {
+                              isBomEditMode && (
+                                <td className="p-5 text-center">
+                                  <div className='flex justify-center items-center gap-2'>
+                                    <button onClick={() => setEditingBomItem(item)} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4" /></button>
+                                    <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                                </td>
+                              )
+                            }
                           </tr>
                         )
                       }
@@ -1100,7 +1095,7 @@ export default function App() {
                   <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
                     <tr>
                       {isCatalogEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllCatalog(filteredCatalogo)} checked={selectedCatalogItems.length === filteredCatalogo.length && filteredCatalogo.length > 0} /></th>}
-                      <th className="p-5 w-24"></th>
+                      <th className="p-5 w-32"></th>
                       <th className="p-5">Pieza</th>
                       <th className="p-5 w-24 text-center">⏱️ Lead</th>
                       <th className="p-5 text-right">Precio Base</th>
@@ -1119,7 +1114,7 @@ export default function App() {
                             {(() => {
                               const isZoomed = zoomedImageId === item.id;
                               return (
-                                <div className="w-20 h-20 relative z-0">
+                                <div className="w-[120px] h-[120px] relative z-0" onDoubleClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })} title="Doble clic para cambiar">
                                   {item.imageUrl ? (
                                     <>
                                       <img
@@ -1131,13 +1126,6 @@ export default function App() {
                                       />
                                       <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
                                       {isZoomed && <div className="fixed inset-0 z-[50]" onClick={() => setZoomedImageId(null)}></div>}
-                                      <button
-                                        onClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })}
-                                        className={`absolute -bottom-2 -right-2 bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 rounded-full p-2 transition-all ${isZoomed ? 'z-[70] scale-125 translate-x-1 translate-y-1 shadow-lg' : 'z-10'}`}
-                                        title="Actualizar imagen"
-                                      >
-                                        <Camera className="w-4 h-4" />
-                                      </button>
                                     </>
                                   ) : (
                                     <button
