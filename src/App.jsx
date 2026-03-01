@@ -4,7 +4,7 @@ import {
   ChevronRight, DollarSign, ArrowLeft,
   PackagePlus, X, BrainCircuit,
   Loader2, Sparkles, Activity, Tag,
-  SlidersHorizontal, Edit3
+  SlidersHorizontal, Edit3, Truck, LayoutList
 } from 'lucide-react';
 
 // --- FIREBASE ---
@@ -660,10 +660,10 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20 overflow-x-hidden">
+    <div className="h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 font-sans overflow-hidden">
 
       {(isDiagnosticOpen || isProcessing) && (
-        <div className="fixed top-20 right-4 z-[500] w-full max-w-sm animate-in slide-in-from-right duration-300">
+        <div className="fixed top-4 right-4 z-[500] w-full max-w-sm animate-in slide-in-from-right duration-300">
           <div className="bg-slate-900 text-white rounded-2xl shadow-2xl p-5 border border-slate-700">
             <div className="flex justify-between items-center mb-4 border-b border-slate-800 pb-3">
               <div className="flex items-center text-xs font-black text-indigo-400 uppercase tracking-tighter"><Activity className="w-4 h-4 mr-2" /> Panel de Procesamiento</div>
@@ -723,24 +723,85 @@ export default function App() {
         onClose={() => setConfirmDelete({ isOpen: false, onConfirm: null })}
       />
 
-      <header className="bg-slate-900 text-white p-4 shadow-xl flex items-center justify-between sticky top-0 z-[100]">
-        <div className="flex items-center space-x-3">
-          <BrainCircuit className="text-indigo-400 w-8 h-8" />
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-black tracking-tighter leading-none">AutoBOM Pro</h1>
-              <span className="text-[10px] font-mono bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">v{APP_VERSION}</span>
+      {/* ===== SIDEBAR (Desktop) / BOTTOM NAV (Mobile) ===== */}
+      <aside className="hidden md:flex flex-col w-64 bg-slate-900 text-white flex-shrink-0">
+        {/* Logo */}
+        <div className="p-5 border-b border-slate-800">
+          <div className="flex items-center gap-3">
+            <BrainCircuit className="text-indigo-400 w-8 h-8 flex-shrink-0" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-black tracking-tighter leading-none">AutoBOM Pro</h1>
+                <span className="text-[10px] font-mono bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full">v{APP_VERSION}</span>
+              </div>
+              <button onClick={testConnection} className="text-[9px] font-bold text-yellow-400 flex items-center hover:text-white transition-colors mt-1 bg-yellow-400/10 px-2 py-0.5 rounded-full w-max">
+                <Activity className="w-3 h-3 mr-1" /> Test API
+              </button>
             </div>
-            <button onClick={testConnection} className="text-[9px] font-bold text-yellow-400 flex items-center hover:text-white transition-colors mt-1 bg-yellow-400/10 px-2 py-0.5 rounded-full w-max"><Activity className="w-3 h-3 mr-1" /> Test API Gemini</button>
           </div>
         </div>
-        <nav className="flex space-x-1 bg-slate-800 p-1 rounded-xl">
-          <button onClick={() => { setActiveTab('proyectos'); setActiveProject(null); setSelectedCatalogItems([]); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab !== 'proyectos' && activeTab !== 'catalogo' ? 'text-slate-400' : (activeTab === 'proyectos' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400')}`}>Proyectos</button>
-          <button onClick={() => { setActiveTab('catalogo'); setActiveProject(null); setSelectedCatalogItems([]); }} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'catalogo' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400'}`}>Catálogo</button>
-        </nav>
-      </header>
 
-      <main className="w-full p-4 md:p-8">
+        {/* Nav Items */}
+        <nav className="flex-1 p-3 space-y-1">
+          <button onClick={() => { setActiveTab('proyectos'); setActiveProject(null); setSelectedCatalogItems([]); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'proyectos' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+            <FolderGit2 className="w-5 h-5 flex-shrink-0" /> Proyectos
+            <span className="ml-auto text-xs bg-slate-800 px-2 py-0.5 rounded-full">{proyectos.length}</span>
+          </button>
+          <button onClick={() => { setActiveTab('catalogo'); setActiveProject(null); setSelectedCatalogItems([]); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'catalogo' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+            <Database className="w-5 h-5 flex-shrink-0" /> Catálogo
+            <span className="ml-auto text-xs bg-slate-800 px-2 py-0.5 rounded-full">{catalogo.length}</span>
+          </button>
+          <button onClick={() => setListManager({ isOpen: true, type: 'provider', title: 'Gestionar Proveedores' })}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+            <Truck className="w-5 h-5 flex-shrink-0" /> Proveedores
+            <span className="ml-auto text-xs bg-slate-800 px-2 py-0.5 rounded-full">{managedLists.providers.length}</span>
+          </button>
+          <button onClick={() => setListManager({ isOpen: true, type: 'brand', title: 'Gestionar Marcas' })}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+            <Tag className="w-5 h-5 flex-shrink-0" /> Marcas
+            <span className="ml-auto text-xs bg-slate-800 px-2 py-0.5 rounded-full">{managedLists.brands.length}</span>
+          </button>
+          <button onClick={() => setListManager({ isOpen: true, type: 'category', title: 'Gestionar Categorías' })}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-slate-400 hover:bg-slate-800 hover:text-white transition-all">
+            <LayoutList className="w-5 h-5 flex-shrink-0" /> Categorías
+            <span className="ml-auto text-xs bg-slate-800 px-2 py-0.5 rounded-full">{managedLists.categories.length}</span>
+          </button>
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-slate-800 text-[10px] text-slate-500 text-center">
+          © 2025 AutoBOM Pro
+        </div>
+      </aside>
+
+      {/* ===== BOTTOM NAV (Mobile) ===== */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-slate-900 border-t border-slate-800 flex justify-around px-2 py-2 safe-area-bottom">
+        <button onClick={() => { setActiveTab('proyectos'); setActiveProject(null); }}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${activeTab === 'proyectos' ? 'text-indigo-400 bg-indigo-950' : 'text-slate-500'}`}>
+          <FolderGit2 className="w-5 h-5" />
+          <span className="text-[10px] font-bold">Proyectos</span>
+        </button>
+        <button onClick={() => { setActiveTab('catalogo'); setActiveProject(null); }}
+          className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all ${activeTab === 'catalogo' ? 'text-indigo-400 bg-indigo-950' : 'text-slate-500'}`}>
+          <Database className="w-5 h-5" />
+          <span className="text-[10px] font-bold">Catálogo</span>
+        </button>
+        <button onClick={() => setListManager({ isOpen: true, type: 'provider', title: 'Gestionar Proveedores' })}
+          className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-slate-500">
+          <Truck className="w-5 h-5" />
+          <span className="text-[10px] font-bold">Prov.</span>
+        </button>
+        <button onClick={() => setListManager({ isOpen: true, type: 'brand', title: 'Gestionar Marcas' })}
+          className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-slate-500">
+          <Tag className="w-5 h-5" />
+          <span className="text-[10px] font-bold">Marcas</span>
+        </button>
+      </nav>
+
+      {/* ===== MAIN CONTENT ===== */}
+      <main className="flex-1 overflow-y-auto pb-20 md:pb-4 p-4 md:p-8">
 
         {activeTab === 'proyectos' && (
           <div className="space-y-6 animate-in fade-in duration-300">
@@ -851,9 +912,9 @@ export default function App() {
                     </button>
                   </div>
                 )}
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm min-h-[400px] overflow-hidden">
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 z-10">
                       <tr>
                         {isBomEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllBomItems(filteredActiveBomItems)} checked={filteredActiveBomItems.length > 0 && selectedBomItems.length === filteredActiveBomItems.length} /></th>}
                         <th className="p-5 w-20 text-center">Visual</th>
@@ -977,7 +1038,7 @@ export default function App() {
                 </div>
               )}
 
-              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-auto min-h-[400px]">
+              <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
                 <table className="w-full text-left text-sm">
                   <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
                     <tr>
