@@ -845,19 +845,19 @@ export default function App() {
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight">{activeProject.name}</h2>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <div className="flex flex-1 gap-3 min-w-[300px]">
-                  <button onClick={() => setCatalogPickerOpen(true)} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all">
-                    <PackagePlus className="w-5 h-5 mr-2" /> Catálogo
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button onClick={() => setCatalogPickerOpen(true)} className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all text-sm">
+                    <PackagePlus className="w-4 h-4 mr-1.5" /> Catálogo
                   </button>
-                  <div className="relative flex-1">
+                  <div className="relative flex-1 sm:flex-none">
                     <input type="file" ref={pdfInputRef} onChange={handlePdfUpload} accept=".pdf" className="hidden" />
-                    <button onClick={() => pdfInputRef.current.click()} disabled={isProcessing} className="w-full h-full bg-slate-900 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all disabled:bg-slate-400">
-                      {isProcessing ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2 text-yellow-400 fill-yellow-400" />}
-                      {isProcessing ? "Procesando" : 'Importar PDF'}
+                    <button onClick={() => pdfInputRef.current.click()} disabled={isProcessing} className="w-full bg-slate-900 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all disabled:bg-slate-400 text-sm">
+                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Sparkles className="w-4 h-4 mr-1.5 text-yellow-400 fill-yellow-400" />}
+                      {isProcessing ? "..." : 'PDF'}
                     </button>
                   </div>
                 </div>
-                <div className="bg-green-50 border border-green-100 px-6 py-3 rounded-2xl text-right flex-none min-w-[140px] flex flex-col justify-center">
+                <div className="bg-green-50 border border-green-100 px-4 py-3 rounded-2xl text-right w-full sm:w-auto sm:min-w-[140px] flex flex-col justify-center">
                   <div className="text-[10px] font-black text-green-800 uppercase tracking-widest leading-none mb-1">Inversión</div>
                   <div className="text-2xl font-black text-green-700 tracking-tighter leading-none">${(activeBomItems || []).reduce((s, i) => s + (i.totalPrice || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
                 </div>
@@ -868,8 +868,8 @@ export default function App() {
               <div className="col-span-1 space-y-4">
 
                 {/* FILTROS Y BÚSQUEDA BOM */}
-                <div className="flex gap-3 items-center">
-                  <div className="relative flex-1">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                     <input
                       value={bomFilters.search}
@@ -890,13 +890,15 @@ export default function App() {
                   {(() => {
                     const pcrValues = [...new Set(activeBomItems.map(i => i.prcr).filter(Boolean))];
                     if (pcrValues.length > 0) return (
-                      <SearchableDropdown compact options={[{ value: '', label: 'Todos los PRCR' }, ...pcrValues.map(p => ({ value: p, label: p }))]} value={bomFilters.prcr} onChange={val => setBomFilters({ ...bomFilters, prcr: val })} placeholder="#PRCR" />
+                      <div className="w-full sm:w-auto sm:min-w-[140px]">
+                        <SearchableDropdown compact options={[{ value: '', label: 'Todos los PRCR' }, ...pcrValues.map(p => ({ value: p, label: p }))]} value={bomFilters.prcr} onChange={val => setBomFilters({ ...bomFilters, prcr: val })} placeholder="#PRCR" />
+                      </div>
                     );
                     return null;
                   })()}
                   <button
                     onClick={() => { setIsBomEditMode(!isBomEditMode); setSelectedBomItems([]); }}
-                    className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isBomEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                    className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${isBomEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                   >
                     <SlidersHorizontal className="w-4 h-4" />
                     <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
@@ -998,10 +1000,10 @@ export default function App() {
         {activeTab === 'catalogo' && (
           <div className="grid grid-cols-1 gap-8 animate-in fade-in duration-300">
             <div className="space-y-4">
-              <div className="flex gap-3 items-center">
-                <div className="relative flex-1">
+              <div className="flex flex-wrap gap-2 items-center">
+                <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input value={catalogFilters.search} onChange={e => setCatalogFilters({ ...catalogFilters, search: e.target.value })} placeholder="Filtrar por nombre, P/N, marca..." className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500" />
+                  <input value={catalogFilters.search} onChange={e => setCatalogFilters({ ...catalogFilters, search: e.target.value })} placeholder="Filtrar por nombre, P/N..." className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
                 <FilterPopover
                   filters={catalogFilters}
@@ -1012,19 +1014,19 @@ export default function App() {
                     providers: providerOptions
                   }}
                 />
-                <button onClick={() => { setEditingMasterRecord(null); setIsMasterRecordModalOpen(true); }} className="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all whitespace-nowrap h-full">
-                  <Plus className="w-5 h-5 mr-2" />Nuevo Registro
+                <button onClick={() => { setEditingMasterRecord(null); setIsMasterRecordModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all text-sm">
+                  <Plus className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Nuevo </span>Registro
                 </button>
                 <button
                   onClick={() => { setIsCatalogEditMode(!isCatalogEditMode); setSelectedCatalogItems([]); }}
-                  className={`h-full px-4 rounded-xl border flex items-center gap-2 transition-all ${isCatalogEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                  className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${isCatalogEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                 >
                   <SlidersHorizontal className="w-4 h-4" />
                   <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
                 </button>
                 <input type="file" ref={excelInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
-                <button onClick={() => excelInputRef.current.click()} disabled={isProcessing} className="bg-green-600 text-white px-5 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:bg-slate-400 whitespace-nowrap h-full">
-                  <Database className="w-5 h-5 mr-2" />Importar Excel
+                <button onClick={() => excelInputRef.current.click()} disabled={isProcessing} className="bg-green-600 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:bg-slate-400 text-sm">
+                  <Database className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Importar </span>Excel
                 </button>
               </div>
 
