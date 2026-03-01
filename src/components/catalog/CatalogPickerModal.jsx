@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ShoppingCart, X, Search, Plus, Check, Loader2 } from 'lucide-react';
+import { ShoppingCart, X, Search, Plus, Check, Loader2, Camera } from 'lucide-react';
 import SearchableDropdown from '../ui/SearchableDropdown';
 
 // ========================================================
@@ -97,17 +97,29 @@ const CatalogPickerModal = ({ onClose, catalogo, managedLists, onAddItems }) => 
                                     onClick={() => handleToggleItem(item.id)}
                                     className={`relative p-4 rounded-2xl border transition-all cursor-pointer group hover:shadow-md ${isSelected ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-300'}`}
                                 >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
-                                            {isSelected && <Check className="w-3.5 h-3.5" />}
+                                    <div className="flex justify-between items-start mb-3 gap-3">
+                                        <div className="flex items-start gap-3 flex-1 overflow-hidden">
+                                            <div className={`w-5 h-5 shrink-0 mt-0.5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300 bg-white'}`}>
+                                                {isSelected && <Check className="w-3.5 h-3.5" />}
+                                            </div>
+                                            {item.imageUrl ? (
+                                                <img src={item.imageUrl} className="w-16 h-16 rounded-xl object-cover border border-slate-200 bg-white shrink-0" alt="" onError={e => e.target.style.display = 'none'} />
+                                            ) : (
+                                                <div className="w-16 h-16 rounded-xl border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center shrink-0">
+                                                    <Camera className="w-5 h-5 text-slate-300" />
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="font-bold text-slate-800 text-sm leading-tight line-clamp-2 mb-1">{item.name}</h3>
+                                                <p className="text-xs text-slate-400 font-mono mb-1 truncate">{item.partNumber}</p>
+                                                <div className="flex flex-wrap gap-1 min-h-[16px]">
+                                                    {brandName && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded font-bold uppercase">{brandName}</span>}
+                                                </div>
+                                            </div>
                                         </div>
-                                        <span className="font-black text-green-700 text-sm">${(item.lastPrice || 0).toLocaleString()}</span>
-                                    </div>
-                                    <h3 className="font-bold text-slate-800 text-sm leading-tight line-clamp-2 mb-1">{item.name}</h3>
-                                    <p className="text-xs text-slate-400 font-mono mb-2">{item.partNumber}</p>
-
-                                    <div className="flex flex-wrap gap-1 mb-2 min-h-[20px]">
-                                        {brandName && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded font-bold uppercase">{brandName}</span>}
+                                        <div className="flex flex-col items-end shrink-0">
+                                            <span className="font-black text-green-700 text-sm">${(item.lastPrice || 0).toLocaleString()}</span>
+                                        </div>
                                     </div>
 
                                     {isSelected && (
