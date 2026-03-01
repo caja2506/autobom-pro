@@ -4,7 +4,7 @@ import { Search, X, Loader2, Check, ExternalLink, AlertTriangle, Camera, Globe, 
 // ========================================================
 // MODAL: BUSCADOR DE IMÁGENES (Dual mode)
 // ========================================================
-const GOOGLE_CSE_KEY = "AIzaSyCjWuyo2Qu5mtL88zj1iTrLCopWLillJNs";
+const GOOGLE_CSE_KEY = "AIzaSyAgG7jwwxHRqDW2IaPRImr6GK-SqjFKDsQ";
 const GOOGLE_CX = "70c2cf7c75dfa4825";
 
 const ImagePickerModal = ({ isOpen, onClose, onSelect, itemName, partNumber }) => {
