@@ -963,7 +963,7 @@ export default function App() {
                           providerName = item.proveedor ? (typeof item.proveedor === 'string' ? item.proveedor : managedLists.providers.find(p => p.id === item.proveedor.id)?.name) : '';
                         }
                         return (
-                          <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50/50'}`}>
+                          <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50/50'} ${zoomedImageId === item.id ? 'relative z-50' : ''}`}>
                             {isBomEditMode && <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectBomItem(item.id)} /></td>}
                             <td className="p-3 text-center">
                               {(() => {
@@ -971,7 +971,7 @@ export default function App() {
                                 const imgUrl = masterPart?.imageUrl;
                                 const isZoomed = zoomedImageId === item.id;
                                 return (
-                                  <div className="w-[120px] h-[120px] mx-auto relative z-0" onDoubleClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })} title="Doble clic para cambiar">
+                                  <div className={`w-[120px] h-[120px] mx-auto relative ${isZoomed ? 'z-[60]' : 'z-0'}`} onDoubleClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })} title="Doble clic para cambiar">
                                     {imgUrl ? (
                                       <>
                                         <img
@@ -1108,13 +1108,13 @@ export default function App() {
                       const brandName = item.brand ? managedLists.brands.find(b => b.id === item.brand.id)?.name : '';
                       const categoryName = item.category ? managedLists.categories.find(c => c.id === item.category.id)?.name : '';
                       return (
-                        <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                        <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'} ${zoomedImageId === item.id ? 'relative z-50' : ''}`}>
                           {isCatalogEditMode && <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectCatalogItem(item.id)} /></td>}
                           <td className="p-3">
                             {(() => {
                               const isZoomed = zoomedImageId === item.id;
                               return (
-                                <div className="w-[120px] h-[120px] relative z-0" onDoubleClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })} title="Doble clic para cambiar">
+                                <div className={`w-[120px] h-[120px] relative ${isZoomed ? 'z-[60]' : 'z-0'}`} onDoubleClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })} title="Doble clic para cambiar">
                                   {item.imageUrl ? (
                                     <>
                                       <img
