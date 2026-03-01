@@ -250,23 +250,28 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                 </div>
 
                 {/* ===== FOOTER ===== */}
-                <div className="p-4 border-t border-slate-200 bg-white flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
-                    <div className="text-sm text-slate-500">
-                        <span className="font-bold text-slate-900">{stats.selected}</span> de {stats.total} ítems seleccionados
-                        {prcr && <span className="ml-3 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold">PRCR: {prcr}</span>}
-                    </div>
-                    <div className="flex gap-3">
-                        <button onClick={onClose} className="px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors">
-                            Cancelar
-                        </button>
-                        <button
-                            onClick={handleConfirm}
-                            disabled={stats.selected === 0 || isConfirming}
-                            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center transition-all active:scale-95"
-                        >
-                            {isConfirming ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Check className="w-5 h-5 mr-2" />}
-                            {isConfirming ? 'Importando...' : `Confirmar Importación (${stats.selected})`}
-                        </button>
+                <div className="p-4 border-t border-slate-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div className="text-sm text-slate-500">
+                            <span className="font-bold text-slate-900">{stats.selected}</span> de {stats.total} ítems seleccionados
+                            {prcr && <span className="ml-3 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold">PRCR: {prcr}</span>}
+                            <div className="mt-1 text-lg font-black text-green-700">
+                                Total: ${items.filter(i => i.isSelected).reduce((sum, i) => sum + (i.quantity || 0) * (i.unitPrice || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            </div>
+                        </div>
+                        <div className="flex gap-3 w-full sm:w-auto">
+                            <button onClick={onClose} className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors">
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleConfirm}
+                                disabled={stats.selected === 0 || isConfirming}
+                                className="flex-1 sm:flex-none px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none flex items-center justify-center transition-all active:scale-95"
+                            >
+                                {isConfirming ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Check className="w-5 h-5 mr-2" />}
+                                {isConfirming ? 'Importando...' : `Confirmar (${stats.selected})`}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
