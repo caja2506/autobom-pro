@@ -44,8 +44,8 @@ const MasterRecordModal = ({ isOpen, onClose, onSave, initialData, managedLists,
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in duration-200">
-                <div className="flex justify-between items-center mb-6">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto flex flex-col">
+                <div className="flex justify-between items-center mb-6 shrink-0">
                     <h2 className="font-black text-xl flex items-center text-slate-800 uppercase tracking-tighter">
                         <Database className="mr-2 text-indigo-600 w-6 h-6" />
                         {initialData ? 'Editar Maestro' : 'Nuevo Registro Maestro'}
