@@ -7,7 +7,7 @@ import { Search, X, Loader2, Image, Check, ExternalLink, AlertTriangle } from 'l
 const GOOGLE_API_KEY = "AIzaSyAgG7jwwxHRqDW2IaPRImr6GK-SqjFKDsQ";
 // NOTA: El usuario necesita crear un Custom Search Engine en https://cse.google.com
 // y pegar el CX ID aquí. Si no se configura, se usa un fallback de búsqueda libre.
-const GOOGLE_CX = ""; // CONFIGURAR: Pegar el CX del Custom Search Engine
+const GOOGLE_CX = "70c2cf7c75dfa4825";
 
 const ImagePickerModal = ({ isOpen, onClose, onSelect, itemName, partNumber }) => {
     const [searchQuery, setSearchQuery] = useState('');
