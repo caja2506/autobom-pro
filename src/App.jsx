@@ -72,6 +72,7 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [editingBomItem, setEditingBomItem] = useState(null);
   const [imagePickerItem, setImagePickerItem] = useState(null); // { id, name, partNumber, collection }
+  const [zoomedImageId, setZoomedImageId] = useState(null);
 
   // Estados de "Modo Edición" para las listas
   const [isBomEditMode, setIsBomEditMode] = useState(false);
@@ -968,24 +969,38 @@ export default function App() {
                               {(() => {
                                 const masterPart = item.masterPartRef ? catalogo.find(p => p.id === item.masterPartRef.id) : null;
                                 const imgUrl = masterPart?.imageUrl;
+                                const isZoomed = zoomedImageId === item.id;
                                 return (
-                                  <button
-                                    onClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })}
-                                    className="w-20 h-20 mx-auto rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex items-center justify-center group relative z-0 hover:z-50"
-                                    title="Buscar imagen"
-                                  >
+                                  <div className="w-20 h-20 mx-auto relative z-0">
                                     {imgUrl ? (
                                       <>
-                                        <img src={imgUrl} alt="" className="w-full h-full object-cover rounded-xl transition-transform duration-300 origin-center group-hover:scale-[2.5] group-hover:shadow-2xl" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                                        <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center"><Camera className="w-6 h-6 text-slate-300" /></div>
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl pointer-events-none">
-                                          <Camera className="w-6 h-6 text-white drop-shadow-md" />
-                                        </div>
+                                        <img
+                                          src={imgUrl}
+                                          alt=""
+                                          onClick={() => setZoomedImageId(isZoomed ? null : item.id)}
+                                          className={`w-full h-full object-cover rounded-xl border-2 border-slate-200 transition-all duration-300 cursor-zoom-in origin-center ${isZoomed ? 'scale-[2.5] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-[60] cursor-zoom-out' : 'hover:border-indigo-400'}`}
+                                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                        />
+                                        <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
+                                        {isZoomed && <div className="fixed inset-0 z-[50]" onClick={() => setZoomedImageId(null)}></div>}
+                                        <button
+                                          onClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })}
+                                          className={`absolute -bottom-2 -right-2 bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 rounded-full p-2 transition-all ${isZoomed ? 'z-[70] scale-125 translate-x-1 translate-y-1 shadow-lg' : 'z-10'}`}
+                                          title="Actualizar imagen"
+                                        >
+                                          <Camera className="w-4 h-4" />
+                                        </button>
                                       </>
                                     ) : (
-                                      <Camera className="w-6 h-6 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                      <button
+                                        onClick={() => masterPart && setImagePickerItem({ id: masterPart.id, name: masterPart.name, partNumber: masterPart.partNumber })}
+                                        className="w-full h-full rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-400 bg-slate-50 transition-all flex items-center justify-center text-slate-300 hover:text-indigo-500"
+                                        title="Agregar imagen"
+                                      >
+                                        <Camera className="w-6 h-6" />
+                                      </button>
                                     )}
-                                  </button>
+                                  </div>
                                 );
                               })()}
                             </td>
@@ -1085,7 +1100,7 @@ export default function App() {
                   <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
                     <tr>
                       {isCatalogEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllCatalog(filteredCatalogo)} checked={selectedCatalogItems.length === filteredCatalogo.length && filteredCatalogo.length > 0} /></th>}
-                      <th className="p-5 w-20"></th>
+                      <th className="p-5 w-24"></th>
                       <th className="p-5">Pieza</th>
                       <th className="p-5 w-24 text-center">⏱️ Lead</th>
                       <th className="p-5 text-right">Precio Base</th>
@@ -1101,23 +1116,41 @@ export default function App() {
                         <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
                           {isCatalogEditMode && <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectCatalogItem(item.id)} /></td>}
                           <td className="p-3">
-                            <button
-                              onClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })}
-                              className="w-16 h-16 rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-400 transition-all flex items-center justify-center relative group z-0 hover:z-50"
-                              title="Buscar imagen"
-                            >
-                              {item.imageUrl ? (
-                                <>
-                                  <img src={item.imageUrl} alt="" className="w-full h-full object-cover rounded-xl transition-transform duration-300 origin-left group-hover:scale-[2.5] group-hover:shadow-2xl" onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                                  <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center"><Camera className="w-5 h-5 text-slate-300" /></div>
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl pointer-events-none">
-                                    <Camera className="w-5 h-5 text-white drop-shadow-md" />
-                                  </div>
-                                </>
-                              ) : (
-                                <Camera className="w-5 h-5 text-slate-300 group-hover:text-indigo-500 transition-colors" />
-                              )}
-                            </button>
+                            {(() => {
+                              const isZoomed = zoomedImageId === item.id;
+                              return (
+                                <div className="w-20 h-20 relative z-0">
+                                  {item.imageUrl ? (
+                                    <>
+                                      <img
+                                        src={item.imageUrl}
+                                        alt=""
+                                        onClick={() => setZoomedImageId(isZoomed ? null : item.id)}
+                                        className={`w-full h-full object-cover rounded-xl border-2 border-slate-200 transition-all duration-300 cursor-zoom-in origin-left ${isZoomed ? 'scale-[2.5] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-[60] cursor-zoom-out' : 'hover:border-indigo-400'}`}
+                                        onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                                      />
+                                      <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
+                                      {isZoomed && <div className="fixed inset-0 z-[50]" onClick={() => setZoomedImageId(null)}></div>}
+                                      <button
+                                        onClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })}
+                                        className={`absolute -bottom-2 -right-2 bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50 rounded-full p-2 transition-all ${isZoomed ? 'z-[70] scale-125 translate-x-1 translate-y-1 shadow-lg' : 'z-10'}`}
+                                        title="Actualizar imagen"
+                                      >
+                                        <Camera className="w-4 h-4" />
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button
+                                      onClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })}
+                                      className="w-full h-full rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-400 bg-slate-50 transition-all flex items-center justify-center text-slate-300 hover:text-indigo-500"
+                                      title="Agregar imagen"
+                                    >
+                                      <Camera className="w-6 h-6" />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="p-5">
                             <div className="font-bold text-slate-800 text-base leading-tight">{item.name || 'Sin nombre'}</div>
