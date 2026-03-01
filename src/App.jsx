@@ -978,7 +978,7 @@ export default function App() {
                                           src={imgUrl}
                                           alt=""
                                           onClick={() => setZoomedImageId(isZoomed ? null : item.id)}
-                                          className={`w-full h-full object-cover rounded-xl border-2 border-slate-200 transition-all duration-300 cursor-zoom-in origin-center ${isZoomed ? 'scale-[2.5] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-[60] cursor-zoom-out' : 'hover:border-indigo-400'}`}
+                                          className={`w-full h-full object-cover rounded-xl border-2 border-slate-200 transition-all duration-300 cursor-zoom-in origin-left ${isZoomed ? 'scale-[2.5] translate-x-[25%] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-[60] cursor-zoom-out' : 'hover:border-indigo-400'}`}
                                           onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                                         />
                                         <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
@@ -1121,7 +1121,7 @@ export default function App() {
                                         src={item.imageUrl}
                                         alt=""
                                         onClick={() => setZoomedImageId(isZoomed ? null : item.id)}
-                                        className={`w-full h-full object-cover rounded-xl border-2 border-slate-200 transition-all duration-300 cursor-zoom-in origin-left ${isZoomed ? 'scale-[2.5] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-[60] cursor-zoom-out' : 'hover:border-indigo-400'}`}
+                                        className={`w-full h-full object-cover rounded-xl border-2 border-slate-200 transition-all duration-300 cursor-zoom-in origin-left ${isZoomed ? 'scale-[2.5] translate-x-[25%] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-[60] cursor-zoom-out' : 'hover:border-indigo-400'}`}
                                         onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                                       />
                                       <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
