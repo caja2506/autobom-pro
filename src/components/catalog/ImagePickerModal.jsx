@@ -174,7 +174,7 @@ const ImagePickerModal = ({ isOpen, onClose, onSelect, itemName, partNumber }) =
                                             <img
                                                 src={img.thumbnail}
                                                 alt={img.title}
-                                                className="w-full h-full object-cover"
+                                                className="w-full h-full object-contain p-1"
                                                 loading="lazy"
                                                 onError={e => { e.target.src = ''; e.target.alt = '⚠️'; }}
                                             />

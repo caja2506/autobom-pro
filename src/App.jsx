@@ -4,12 +4,18 @@ import {
   ChevronRight, DollarSign, ArrowLeft,
   PackagePlus, X, BrainCircuit,
   Loader2, Sparkles, Activity, Tag,
-  SlidersHorizontal, Edit3, Truck, LayoutList, Camera
+  SlidersHorizontal, Edit3, Truck, LayoutList, Camera, LogOut, Shield, Users
 } from 'lucide-react';
+
+// --- AUTH & ROLES ---
+import { useAuth } from './contexts/AuthContext';
+import { useRole } from './contexts/RoleContext';
+import LoginPage from './components/auth/LoginPage';
 
 // --- FIREBASE ---
 import { collection, onSnapshot, doc, setDoc, getDocs, deleteDoc, updateDoc, writeBatch, query, where } from 'firebase/firestore';
-import { db } from './firebase';
+import { db, functions } from './firebase';
+import { httpsCallable } from 'firebase/functions';
 
 // --- COMPONENTES EXTRAIDOS ---
 import SearchableDropdown from './components/ui/SearchableDropdown';
@@ -21,6 +27,7 @@ import CatalogPickerModal from './components/catalog/CatalogPickerModal';
 import BomItemEditModal from './components/projects/BomItemEditModal';
 import PdfReviewModal from './components/projects/PdfReviewModal';
 import ImagePickerModal from './components/catalog/ImagePickerModal';
+import UserAdminPanel from './components/admin/UserAdminPanel';
 
 // --- UTILIDADES ---
 import { normalizePartNumber, findSimilarProviders } from './utils/normalizers';
@@ -30,9 +37,9 @@ const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.mi
 const PDFJS_WORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
 
-// --- API GEMINI CONFIG ---
-const API_KEY = "AIzaSyAgG7jwwxHRqDW2IaPRImr6GK-SqjFKDsQ";
-const MODEL_NAME = "gemini-2.5-flash";
+// --- CLOUD FUNCTIONS ---
+const analyzeQuotePdfFn = httpsCallable(functions, 'analyzeQuotePdf');
+const testGeminiConnectionFn = httpsCallable(functions, 'testGeminiConnection');
 
 
 
@@ -42,6 +49,10 @@ const MODEL_NAME = "gemini-2.5-flash";
 const APP_VERSION = "3.4";
 
 export default function App() {
+  const { user, loading: authLoading, signOut } = useAuth();
+  const { role, roleLoading, isAdmin, canEdit, canDelete } = useRole();
+
+  // --- ALL HOOKS MUST BE ABOVE CONDITIONAL RETURNS ---
   const [proyectos, setProyectos] = useState([]);
   const [catalogo, setCatalogo] = useState([]);
   const [bomItems, setBomItems] = useState([]);
@@ -73,6 +84,7 @@ export default function App() {
   const [editingBomItem, setEditingBomItem] = useState(null);
   const [imagePickerItem, setImagePickerItem] = useState(null); // { id, name, partNumber, collection }
   const [zoomedImageId, setZoomedImageId] = useState(null);
+  const [zoomedImageUrl, setZoomedImageUrl] = useState(null);
 
   // Estados de "Modo Edición" para las listas
   const [isBomEditMode, setIsBomEditMode] = useState(false);
@@ -90,10 +102,6 @@ export default function App() {
 
   const pdfInputRef = useRef(null);
   const excelInputRef = useRef(null);
-
-  const activeBomItems = activeProject
-    ? bomItems.filter(i => i.projectId === activeProject.id).sort((a, b) => new Date(a.addedAt) - new Date(b.addedAt))
-    : [];
 
   const safeLocaleCompare = (a, b, field) => String(a[field] || '').localeCompare(String(b[field] || ''));
 
@@ -127,21 +135,88 @@ export default function App() {
     setIsBomEditMode(false);
   }, [activeProject, activeTab]);
 
+  const activeBomItems = activeProject
+    ? bomItems.filter(i => i.projectId === activeProject.id).sort((a, b) => new Date(a.addedAt) - new Date(b.addedAt))
+    : [];
+
+  const brandOptions = [...managedLists.brands.map(b => ({ value: b.id, label: b.name }))];
+  const categoryOptions = [...managedLists.categories.map(c => ({ value: c.id, label: c.name }))];
+  const providerOptions = [...managedLists.providers.map(p => ({ value: p.id, label: p.name }))];
+
+  const filteredCatalogo = useMemo(() => {
+    return catalogo.filter(item => {
+      const brandId = item.brand?.id || '';
+      const categoryId = item.category?.id || '';
+      const providerId = item.defaultProvider?.id || '';
+      const s = catalogFilters.search.toLowerCase();
+
+      const matchesSearch = !s || String(item.name || '').toLowerCase().includes(s) || String(item.partNumber || '').toLowerCase().includes(s);
+      const matchesBrand = catalogFilters.brand.length === 0 || catalogFilters.brand.includes(brandId);
+      const matchesCategory = catalogFilters.category.length === 0 || catalogFilters.category.includes(categoryId);
+      const matchesProvider = catalogFilters.provider.length === 0 || catalogFilters.provider.includes(providerId);
+
+      return matchesSearch && matchesBrand && matchesCategory && matchesProvider;
+    });
+  }, [catalogo, catalogFilters]);
+
+  const filteredActiveBomItems = useMemo(() => {
+    return activeBomItems.filter(item => {
+      let details = {};
+      if (item.masterPartRef) {
+        const masterPart = catalogo.find(p => p.id === item.masterPartRef.id);
+        if (!masterPart) return false;
+        details = {
+          name: masterPart.name,
+          partNumber: masterPart.partNumber,
+          brandId: masterPart.brand?.id || '',
+          categoryId: masterPart.category?.id || '',
+          providerId: item.proveedor?.id || ''
+        };
+      } else {
+        details = {
+          name: item.name,
+          partNumber: item.partNumber,
+          brandId: '',
+          categoryId: '',
+          providerId: item.proveedor ? (typeof item.proveedor === 'string' ? '' : item.proveedor.id) : ''
+        };
+      }
+
+      const s = bomFilters.search.toLowerCase();
+      const matchesSearch = !s || String(details.name || '').toLowerCase().includes(s) || String(details.partNumber || '').toLowerCase().includes(s);
+
+      const matchesBrand = bomFilters.brand.length === 0 || bomFilters.brand.includes(details.brandId);
+      const matchesCategory = bomFilters.category.length === 0 || bomFilters.category.includes(details.categoryId);
+      const matchesProvider = bomFilters.provider.length === 0 || bomFilters.provider.includes(details.providerId);
+      const matchesPrcr = !bomFilters.prcr || (item.prcr || '') === bomFilters.prcr;
+
+      return matchesSearch && matchesBrand && matchesCategory && matchesProvider && matchesPrcr;
+    });
+  }, [activeBomItems, catalogo, bomFilters]);
+
+  // --- Auth Gate (AFTER all hooks) ---
+  if (authLoading || roleLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-indigo-400 animate-spin" />
+          <p className="text-slate-400 text-sm font-bold">Cargando AutoBOM Pro...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return <LoginPage />;
+
+
   const testConnection = async () => {
     setIsDiagnosticOpen(true);
-    setProcessingStatus(`Enviando prueba a ${MODEL_NAME}...`);
+    setProcessingStatus('Enviando prueba a Cloud Function...');
     setLastError(null);
 
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: "Responde únicamente con la palabra: CONECTADO" }] }] })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message || "Fallo HTTP " + response.status);
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      setProcessingStatus(`✅ IA RESPONDE: ${text}`);
+      const result = await testGeminiConnectionFn();
+      setProcessingStatus(`✅ IA RESPONDE: ${result.data.response}`);
     } catch (err) {
       setLastError(err.message);
       setProcessingStatus("❌ FALLO LA CONEXIÓN");
@@ -170,21 +245,9 @@ export default function App() {
       }
       if (!text.trim()) throw new Error("No pudimos extraer texto de este PDF.");
 
-      setProcessingStatus(`Enviando texto a ${MODEL_NAME}...`);
-      const prompt = `Analiza el texto de una cotización. Extrae los datos y devuelve EXCLUSIVAMENTE un JSON estricto con la siguiente estructura: { "supplier": "Nombre Proveedor", "items": [ { "pn": "Número de parte", "description": "Descripción", "quantity": numero, "unitPrice": numero, "leadTimeWeeks": numero } ] }.\nReglas:\n1. Ignora texto irrelevante, encabezados o textos legales.\n2. Los pn (Part Number) deben estar en MAYÚSCULAS y resolverse sin espacios.\n3. description debe ser concisa, técnica y resumida.\n4. quantity y unitPrice deben ser numéricos (usa 0 si falta el dato).\n5. Si no hay proveedor, usa "".\n6. leadTimeWeeks es el tiempo de entrega en SEMANAS. Si dice días, convierte dividiendo entre 7 y redondeando hacia arriba (mínimo 1). Si no se menciona, usa null.\n7. Busca frases como "lead time", "tiempo de entrega", "delivery", "plazo", "semanas", "weeks", "días", "days".\nDevuelve SOLO el JSON sin delimitadores markdown.\n\nTexto:\n\n${text}`;
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { response_mime_type: "application/json" }
-        })
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(`Error de IA: ${result.error?.message || 'Fallo desconocido'}`);
-      const rawJson = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawJson) throw new Error("La IA no devolvió ningún texto.");
-      const data = JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim());
+      setProcessingStatus('Enviando texto a Cloud Function...');
+      const result = await analyzeQuotePdfFn({ text });
+      const data = result.data.data;
 
       if (data.items) {
         setProcessingStatus("Analizando datos...");
@@ -615,62 +678,6 @@ export default function App() {
     });
   }
 
-  const brandOptions = [...managedLists.brands.map(b => ({ value: b.id, label: b.name }))];
-  const categoryOptions = [...managedLists.categories.map(c => ({ value: c.id, label: c.name }))];
-  const providerOptions = [...managedLists.providers.map(p => ({ value: p.id, label: p.name }))];
-
-  const filteredCatalogo = useMemo(() => {
-    return catalogo.filter(item => {
-      const brandId = item.brand?.id || '';
-      const categoryId = item.category?.id || '';
-      const providerId = item.defaultProvider?.id || '';
-      const s = catalogFilters.search.toLowerCase();
-
-      const matchesSearch = !s || String(item.name || '').toLowerCase().includes(s) || String(item.partNumber || '').toLowerCase().includes(s);
-      const matchesBrand = catalogFilters.brand.length === 0 || catalogFilters.brand.includes(brandId);
-      const matchesCategory = catalogFilters.category.length === 0 || catalogFilters.category.includes(categoryId);
-      const matchesProvider = catalogFilters.provider.length === 0 || catalogFilters.provider.includes(providerId);
-
-      return matchesSearch && matchesBrand && matchesCategory && matchesProvider;
-    });
-  }, [catalogo, catalogFilters]);
-
-  const filteredActiveBomItems = useMemo(() => {
-    return activeBomItems.filter(item => {
-      let details = {};
-      if (item.masterPartRef) {
-        const masterPart = catalogo.find(p => p.id === item.masterPartRef.id);
-        if (!masterPart) return false;
-        details = {
-          name: masterPart.name,
-          partNumber: masterPart.partNumber,
-          brandId: masterPart.brand?.id || '',
-          categoryId: masterPart.category?.id || '',
-          providerId: item.proveedor?.id || ''
-        };
-      } else {
-        // For legacy or non-linked items (if any), limited filtering
-        details = {
-          name: item.name,
-          partNumber: item.partNumber,
-          brandId: '',
-          categoryId: '',
-          providerId: item.proveedor ? (typeof item.proveedor === 'string' ? '' : item.proveedor.id) : ''
-        };
-      }
-
-      const s = bomFilters.search.toLowerCase();
-      const matchesSearch = !s || String(details.name || '').toLowerCase().includes(s) || String(details.partNumber || '').toLowerCase().includes(s);
-
-      const matchesBrand = bomFilters.brand.length === 0 || bomFilters.brand.includes(details.brandId);
-      const matchesCategory = bomFilters.category.length === 0 || bomFilters.category.includes(details.categoryId);
-      const matchesProvider = bomFilters.provider.length === 0 || bomFilters.provider.includes(details.providerId);
-      const matchesPrcr = !bomFilters.prcr || (item.prcr || '') === bomFilters.prcr;
-
-      return matchesSearch && matchesBrand && matchesCategory && matchesProvider && matchesPrcr;
-    });
-  }, [activeBomItems, catalogo, bomFilters]);
-
 
   return (
     <div className="h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 font-sans overflow-hidden">
@@ -789,11 +796,36 @@ export default function App() {
             <LayoutList className="w-5 h-5 flex-shrink-0" /> Categorías
             <span className="ml-auto text-xs bg-slate-800 px-2 py-0.5 rounded-full">{managedLists.categories.length}</span>
           </button>
+          {isAdmin && (
+            <button onClick={() => { setActiveTab('usuarios'); setActiveProject(null); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTab === 'usuarios' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/30' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}>
+              <Users className="w-5 h-5 flex-shrink-0" /> Usuarios
+            </button>
+          )}
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 text-[10px] text-slate-500 text-center">
-          © 2025 AutoBOM Pro
+        {/* User Info & Sign Out */}
+        <div className="p-4 border-t border-slate-800 space-y-3">
+          <div className="flex items-center gap-3">
+            {user.photoURL ? (
+              <img src={user.photoURL} alt="" className="w-8 h-8 rounded-full flex-shrink-0" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                {(user.displayName || user.email || '?')[0].toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-white truncate">{user.displayName || 'Usuario'}</p>
+              <div className="flex items-center gap-1">
+                <Shield className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                <span className={`text-[10px] font-bold uppercase tracking-wider ${isAdmin ? 'text-emerald-400' : canEdit ? 'text-amber-400' : 'text-slate-500'}`}>{role || 'viewer'}</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={signOut} className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800 py-2 px-3 rounded-lg transition-all">
+            <LogOut className="w-3.5 h-3.5" /> Cerrar Sesión
+          </button>
+          <p className="text-[10px] text-slate-600 text-center">© 2025 AutoBOM Pro</p>
         </div>
       </aside>
 
@@ -828,7 +860,7 @@ export default function App() {
           <div className="space-y-6 animate-in fade-in duration-300">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
               <h2 className="font-black text-2xl text-slate-800 tracking-tight">Tus Proyectos</h2>
-              <button onClick={() => { setEditingProjectId(null); setNewProjectName(''); setNewProjectDesc(''); setIsProjectModalOpen(true); }} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg flex items-center justify-center active:scale-95 transition-transform"><Plus className="mr-2" /> Nuevo Proyecto</button>
+              {canEdit && <button onClick={() => { setEditingProjectId(null); setNewProjectName(''); setNewProjectDesc(''); setIsProjectModalOpen(true); }} className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg flex items-center justify-center active:scale-95 transition-transform"><Plus className="mr-2" /> Nuevo Proyecto</button>}
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {(proyectos || []).map(p => {
@@ -847,10 +879,10 @@ export default function App() {
                         <ChevronRight className="text-indigo-500 w-5 h-5" />
                       </div>
                     </div>
-                    <div className="absolute top-4 right-4 flex space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); setEditingProjectId(p.id); setNewProjectName(p.name); setNewProjectDesc(p.description); setIsProjectModalOpen(true); }} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100"><Edit3 className="w-4 h-4" /></button>
-                      <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: '¿Borrar proyecto?', message: `Se borrarán todos los datos de "${p.name}".`, onConfirm: () => deleteDoc(doc(db, 'proyectos_bom', p.id)) }); }} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>
-                    </div>
+                    {(canEdit || canDelete) && <div className="absolute top-4 right-4 flex space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      {canEdit && <button onClick={(e) => { e.stopPropagation(); setEditingProjectId(p.id); setNewProjectName(p.name); setNewProjectDesc(p.description); setIsProjectModalOpen(true); }} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100"><Edit3 className="w-4 h-4" /></button>}
+                      {canDelete && <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: '¿Borrar proyecto?', message: `Se borrarán todos los datos de "${p.name}".`, onConfirm: () => deleteDoc(doc(db, 'proyectos_bom', p.id)) }); }} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100"><Trash2 className="w-4 h-4" /></button>}
+                    </div>}
                   </div>
                 )
               })}
@@ -866,7 +898,7 @@ export default function App() {
                 <h2 className="text-3xl font-black text-slate-900 tracking-tight">{activeProject.name}</h2>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                <div className="flex gap-3 w-full sm:w-auto">
+                {canEdit && <div className="flex gap-3 w-full sm:w-auto">
                   <button onClick={() => setCatalogPickerOpen(true)} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3.5 rounded-2xl font-black flex items-center justify-center shadow-xl active:scale-95 transition-all text-sm">
                     <PackagePlus className="w-5 h-5 mr-2" /> <span className="hidden sm:inline">Desde </span>Catálogo
                   </button>
@@ -877,7 +909,7 @@ export default function App() {
                       {isProcessing ? "Procesando..." : <><span className="hidden sm:inline">Importar </span>PDF</>}
                     </button>
                   </div>
-                </div>
+                </div>}
                 <div className="bg-green-50 border border-green-100 px-4 py-3 rounded-2xl text-right w-full sm:w-auto sm:min-w-[140px] flex flex-col justify-center">
                   <div className="text-[10px] font-black text-green-800 uppercase tracking-widest leading-none mb-1">Inversión</div>
                   <div className="text-2xl font-black text-green-700 tracking-tighter leading-none">${(activeBomItems || []).reduce((s, i) => s + (i.totalPrice || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
@@ -917,16 +949,16 @@ export default function App() {
                     );
                     return null;
                   })()}
-                  <button
+                  {canEdit && <button
                     onClick={() => { setIsBomEditMode(!isBomEditMode); setSelectedBomItems([]); }}
                     className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${isBomEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                   >
                     <SlidersHorizontal className="w-4 h-4" />
                     <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
-                  </button>
+                  </button>}
                 </div>
 
-                {selectedBomItems.length > 0 && isBomEditMode && (
+                {selectedBomItems.length > 0 && isBomEditMode && canDelete && (
                   <div className="bg-red-50 border border-red-200 p-3 rounded-2xl flex items-center justify-between animate-in fade-in duration-300">
                     <span className="font-bold text-red-700 text-sm">{selectedBomItems.length} ítems seleccionados</span>
                     <button onClick={handleDeleteSelectedBomItems} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg flex items-center text-sm">
@@ -977,12 +1009,11 @@ export default function App() {
                                         <img
                                           src={imgUrl}
                                           alt=""
-                                          onClick={() => setZoomedImageId(isZoomed ? null : item.id)}
-                                          className={`w-full h-full object-cover rounded-xl border-2 border-slate-200 transition-all duration-300 cursor-zoom-in origin-left ${isZoomed ? 'scale-[2.5] translate-x-[25%] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-[60] cursor-zoom-out' : 'hover:border-indigo-400'}`}
+                                          onClick={() => { setZoomedImageUrl(imgUrl); }}
+                                          className="w-full h-full object-contain rounded-xl border-2 border-slate-200 bg-white transition-all duration-300 cursor-zoom-in hover:border-indigo-400 hover:shadow-lg p-1"
                                           onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                                         />
                                         <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
-                                        {isZoomed && <div className="fixed inset-0 z-[50]" onClick={() => setZoomedImageId(null)}></div>}
                                       </>
                                     ) : (
                                       <button
@@ -1029,8 +1060,8 @@ export default function App() {
                               isBomEditMode && (
                                 <td className="p-5 text-center">
                                   <div className='flex justify-center items-center gap-2'>
-                                    <button onClick={() => setEditingBomItem(item)} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4" /></button>
-                                    <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4" /></button>
+                                    {canEdit && <button onClick={() => setEditingBomItem(item)} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4" /></button>}
+                                    {canDelete && <button onClick={() => setConfirmDelete({ isOpen: true, title: 'Quitar ítem', message: `¿Quitar "${details.name}" de la lista?`, onConfirm: () => deleteDoc(doc(db, 'items_bom', item.id)) })} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4" /></button>}
                                   </div>
                                 </td>
                               )
@@ -1064,23 +1095,23 @@ export default function App() {
                     providers: providerOptions
                   }}
                 />
-                <button onClick={() => { setEditingMasterRecord(null); setIsMasterRecordModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all text-sm">
+                {canEdit && <button onClick={() => { setEditingMasterRecord(null); setIsMasterRecordModalOpen(true); }} className="bg-indigo-600 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all text-sm">
                   <Plus className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Nuevo </span>Registro
-                </button>
-                <button
+                </button>}
+                {canEdit && <button
                   onClick={() => { setIsCatalogEditMode(!isCatalogEditMode); setSelectedCatalogItems([]); }}
                   className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${isCatalogEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
                 >
                   <SlidersHorizontal className="w-4 h-4" />
                   <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
-                </button>
+                </button>}
                 <input type="file" ref={excelInputRef} onChange={handleExcelUpload} accept=".xlsx, .xls, .csv" className="hidden" />
-                <button onClick={() => excelInputRef.current.click()} disabled={isProcessing} className="bg-green-600 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:bg-slate-400 text-sm">
+                {canEdit && <button onClick={() => excelInputRef.current.click()} disabled={isProcessing} className="bg-green-600 text-white px-4 py-3 rounded-2xl font-black flex items-center justify-center shadow-lg active:scale-95 transition-all disabled:bg-slate-400 text-sm">
                   <Database className="w-4 h-4 mr-1.5" /><span className="hidden sm:inline">Importar </span>Excel
-                </button>
+                </button>}
               </div>
 
-              {selectedCatalogItems.length > 0 && isCatalogEditMode && (
+              {selectedCatalogItems.length > 0 && isCatalogEditMode && canDelete && (
                 <div className="bg-red-50 border border-red-200 p-3 rounded-2xl flex items-center justify-between animate-in fade-in duration-300">
                   <span className="font-bold text-red-700 text-sm">{selectedCatalogItems.length} ítems seleccionados</span>
                   <button onClick={handleDeleteSelectedCatalog} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg flex items-center text-sm">
@@ -1120,12 +1151,11 @@ export default function App() {
                                       <img
                                         src={item.imageUrl}
                                         alt=""
-                                        onClick={() => setZoomedImageId(isZoomed ? null : item.id)}
-                                        className={`w-full h-full object-cover rounded-xl border-2 border-slate-200 transition-all duration-300 cursor-zoom-in origin-left ${isZoomed ? 'scale-[2.5] translate-x-[25%] shadow-[0_0_50px_rgba(0,0,0,0.3)] relative z-[60] cursor-zoom-out' : 'hover:border-indigo-400'}`}
+                                        onClick={() => { setZoomedImageUrl(item.imageUrl); }}
+                                        className="w-full h-full object-contain rounded-xl border-2 border-slate-200 bg-white transition-all duration-300 cursor-zoom-in hover:border-indigo-400 hover:shadow-lg p-1"
                                         onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                                       />
                                       <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
-                                      {isZoomed && <div className="fixed inset-0 z-[50]" onClick={() => setZoomedImageId(null)}></div>}
                                     </>
                                   ) : (
                                     <button
@@ -1155,8 +1185,8 @@ export default function App() {
                           {isCatalogEditMode && (
                             <td className="p-5 text-center">
                               <div className="flex justify-center items-center gap-2">
-                                <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4" /></button>
-                                <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) }); }} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4" /></button>
+                                {canEdit && <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4" /></button>}
+                                {canDelete && <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) }); }} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4" /></button>}
                               </div>
                             </td>
                           )}
@@ -1168,6 +1198,10 @@ export default function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'usuarios' && isAdmin && (
+          <UserAdminPanel />
         )}
 
       </main>
@@ -1193,6 +1227,27 @@ export default function App() {
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ===== IMAGE LIGHTBOX ===== */}
+      {zoomedImageUrl && (
+        <div
+          className="fixed inset-0 z-[700] flex items-center justify-center bg-black/80 backdrop-blur-md cursor-zoom-out animate-in fade-in duration-200 p-6"
+          onClick={() => setZoomedImageUrl(null)}
+        >
+          <button
+            onClick={() => setZoomedImageUrl(null)}
+            className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img
+            src={zoomedImageUrl}
+            alt="Imagen ampliada"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 

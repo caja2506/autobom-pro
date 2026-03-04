@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users_roles/$(request.auth.uid)).data.role;
+    }
+
+    // Usuarios autenticados pueden LEER todas las colecciones
+    match /{collection}/{document=**} {
+      allow read: if request.auth != null;
+    }
+
+    // --- users_roles ---
+    // Solo un admin puede cambiar roles de otros usuarios.
+    // Un usuario puede leer su propio rol (cubierto por la regla de lectura global).
+    // La creación automática del primer usuario se maneja desde el RoleContext del frontend.
+    match /users_roles/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update, delete: if request.auth != null && getUserRole() == 'admin';
+    }
+
+    // --- proyectos_bom ---
+    match /proyectos_bom/{docId} {
+      allow create, update: if request.auth != null
+        && getUserRole() in ['admin', 'editor'];
+      allow delete: if request.auth != null
+        && getUserRole() == 'admin';
+    }
+
+    // --- catalogo_maestro ---
+    match /catalogo_maestro/{docId} {
+      allow create, update: if request.auth != null
+        && getUserRole() in ['admin', 'editor'];
+      allow delete: if request.auth != null
+        && getUserRole() == 'admin';
+    }
+
+    // --- items_bom ---
+    match /items_bom/{docId} {
+      allow create, update: if request.auth != null
+        && getUserRole() in ['admin', 'editor'];
+      allow delete: if request.auth != null
+        && getUserRole() == 'admin';
+    }
+
+    // --- marcas, categorias, proveedores ---
+    match /marcas/{docId} {
+      allow create, update: if request.auth != null
+        && getUserRole() in ['admin', 'editor'];
+      allow delete: if request.auth != null
+        && getUserRole() == 'admin';
+    }
+
+    match /categorias/{docId} {
+      allow create, update: if request.auth != null
+        && getUserRole() in ['admin', 'editor'];
+      allow delete: if request.auth != null
+        && getUserRole() == 'admin';
+    }
+
+    match /proveedores/{docId} {
+      allow create, update: if request.auth != null
+        && getUserRole() in ['admin', 'editor'];
+      allow delete: if request.auth != null
+        && getUserRole() == 'admin';
+    }
+  }
+}
