@@ -502,6 +502,7 @@ export default function App() {
       category: formData.category ? doc(db, 'categorias', formData.category) : null,
       defaultProvider: formData.defaultProvider ? doc(db, 'proveedores', formData.defaultProvider) : null,
       leadTimeWeeks: formData.leadTimeWeeks === '' ? null : Number(formData.leadTimeWeeks),
+      imageUrl: formData.imageUrl ? String(formData.imageUrl).trim() : '',
     };
 
     if (editingMasterRecord) {
