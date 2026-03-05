@@ -32,10 +32,12 @@ import UserAdminPanel from './components/admin/UserAdminPanel';
 // --- UTILIDADES ---
 import { normalizePartNumber, findSimilarProviders } from './utils/normalizers';
 
-// --- LIBRERÍAS EXTERNAS (CDN) ---
-const PDFJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-const PDFJS_WORKER_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-const XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+// --- LIBRERÍAS (npm, empaquetadas con la app) ---
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import * as XLSX from 'xlsx';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 // --- CLOUD FUNCTIONS ---
 const analyzeQuotePdfFn = httpsCallable(functions, 'analyzeQuotePdf');
@@ -106,16 +108,6 @@ export default function App() {
   const safeLocaleCompare = (a, b, field) => String(a[field] || '').localeCompare(String(b[field] || ''));
 
   useEffect(() => {
-    const loadScript = (src) => {
-      if (!document.querySelector(`script[src="${src}"]`)) {
-        const s = document.createElement("script");
-        s.src = src;
-        s.async = true;
-        document.body.appendChild(s);
-      }
-    };
-    loadScript(PDFJS_URL);
-    loadScript(XLSX_URL);
 
     onSnapshot(collection(db, 'proyectos_bom'), s => setProyectos(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))));
     onSnapshot(collection(db, 'catalogo_maestro'), s => setCatalogo(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => safeLocaleCompare(a, b, 'name'))));
@@ -226,7 +218,7 @@ export default function App() {
   const handlePdfUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !activeProject) return;
-    if (!window.pdfjsLib) return alert("La herramienta PDF aún se está cargando. Intenta en 3 segundos.");
+    if (!pdfjsLib) return alert("Error cargando la herramienta PDF.");
 
     setIsProcessing(true);
     setIsDiagnosticOpen(true);
@@ -234,9 +226,8 @@ export default function App() {
     setLastError(null);
 
     try {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       let text = "";
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -353,8 +344,8 @@ export default function App() {
   const handleExcelUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!window.XLSX) {
-      alert("La herramienta Excel aún se está cargando. Intenta en 3 segundos.");
+    if (!XLSX) {
+      alert("Error cargando la herramienta Excel.");
       return;
     }
 
@@ -365,10 +356,10 @@ export default function App() {
 
     try {
       const data = await file.arrayBuffer();
-      const workbook = window.XLSX.read(data);
+      const workbook = XLSX.read(data);
       const worksheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[worksheetName];
-      const json = window.XLSX.utils.sheet_to_json(worksheet);
+      const json = XLSX.utils.sheet_to_json(worksheet);
 
       if (json.length === 0) throw new Error("El archivo Excel está vacío o tiene un formato no compatible.");
 

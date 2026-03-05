@@ -12,11 +12,12 @@ service cloud.firestore {
     }
 
     // --- users_roles ---
-    // Solo un admin puede cambiar roles de otros usuarios.
-    // Un usuario puede leer su propio rol (cubierto por la regla de lectura global).
-    // La creación automática del primer usuario se maneja desde el RoleContext del frontend.
+    // Un usuario puede crear su propio doc, pero SOLO con role "viewer"
+    // Solo un admin puede cambiar roles
     match /users_roles/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.role == 'viewer';
       allow update, delete: if request.auth != null && getUserRole() == 'admin';
     }
 

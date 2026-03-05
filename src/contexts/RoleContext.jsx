@@ -30,17 +30,16 @@ export function RoleProvider({ children }) {
             if (snap.exists()) {
                 setRole(snap.data().role || 'viewer');
             } else {
-                // First-time user: auto-create as 'admin' (first user is admin)
-                // For subsequent users, you can change default to 'viewer'
-                const isFirstUser = true; // Change this logic as needed
-                const defaultRole = isFirstUser ? 'admin' : 'viewer';
+                // New user: always start as 'viewer'
+                // Only an admin can promote users via the admin panel
                 await setDoc(userRoleRef, {
                     email: user.email,
                     displayName: user.displayName || '',
-                    role: defaultRole,
+                    photoURL: user.photoURL || '',
+                    role: 'viewer',
                     createdAt: new Date().toISOString(),
                 });
-                setRole(defaultRole);
+                setRole('viewer');
             }
             setRoleLoading(false);
         });
