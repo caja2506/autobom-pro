@@ -4,8 +4,10 @@ const { initializeApp } = require("firebase-admin/app");
 
 initializeApp();
 
-// Secret managed via: firebase functions:secrets:set GEMINI_API_KEY
+// Secrets managed via: firebase functions:secrets:set <SECRET_NAME>
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const googleCseKey = defineSecret("GOOGLE_CSE_KEY");
+const googleCx = defineSecret("GOOGLE_CX");
 
 const MODEL_NAME = "gemini-2.5-flash";
 
@@ -128,6 +130,53 @@ ${text}`;
                     "La IA devolvió JSON inválido. Intenta de nuevo."
                 );
             }
+            throw new HttpsError("internal", err.message);
+        }
+    }
+);
+
+/**
+ * Cloud Function: searchImages
+ * Proxies Google Custom Search API for image search.
+ * Keeps the CSE API key and CX ID server-side.
+ */
+exports.searchImages = onCall(
+    { secrets: [googleCseKey, googleCx] },
+    async (request) => {
+        const { query } = request.data;
+
+        if (!query || typeof query !== "string" || !query.trim()) {
+            throw new HttpsError(
+                "invalid-argument",
+                "Se requiere un término de búsqueda."
+            );
+        }
+
+        const key = googleCseKey.value();
+        const cx = googleCx.value();
+        const url = `https://www.googleapis.com/customsearch/v1?key=${key}&cx=${cx}&q=${encodeURIComponent(query + " product")}&searchType=image&num=8&imgSize=medium&safe=active`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.error) {
+                throw new HttpsError(
+                    "internal",
+                    data.error.message || "Error en la búsqueda de imágenes"
+                );
+            }
+
+            const images = (data.items || []).map((item) => ({
+                url: item.link,
+                thumbnail: item.image?.thumbnailLink || item.link,
+                title: item.title,
+                source: item.displayLink,
+            }));
+
+            return { images };
+        } catch (err) {
+            if (err instanceof HttpsError) throw err;
             throw new HttpsError("internal", err.message);
         }
     }

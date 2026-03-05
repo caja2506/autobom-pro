@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, Loader2, Check, ExternalLink, AlertTriangle, Camera, Globe, Image } from 'lucide-react';
+import { functions } from '../../firebase';
+import { httpsCallable } from 'firebase/functions';
 
 // ========================================================
 // MODAL: BUSCADOR DE IMÁGENES (Dual mode)
 // ========================================================
-const GOOGLE_CSE_KEY = "AIzaSyAgG7jwwxHRqDW2IaPRImr6GK-SqjFKDsQ";
-const GOOGLE_CX = "70c2cf7c75dfa4825";
+const searchImagesFn = httpsCallable(functions, 'searchImages');
 
 const ImagePickerModal = ({ isOpen, onClose, onSelect, itemName, partNumber }) => {
     const [mode, setMode] = useState('search'); // 'search' | 'url'
@@ -41,21 +42,11 @@ const ImagePickerModal = ({ isOpen, onClose, onSelect, itemName, partNumber }) =
         setImages([]);
 
         try {
-            const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_CSE_KEY}&cx=${GOOGLE_CX}&q=${encodeURIComponent(query + ' product')}&searchType=image&num=8&imgSize=medium&safe=active`;
-            const res = await fetch(url);
-            const data = await res.json();
+            const result = await searchImagesFn({ query });
+            const imageResults = result.data.images || [];
 
-            if (data.error) {
-                throw new Error(data.error.message || 'Error de API');
-            }
-
-            if (data.items && data.items.length > 0) {
-                setImages(data.items.map(item => ({
-                    url: item.link,
-                    thumbnail: item.image?.thumbnailLink || item.link,
-                    title: item.title,
-                    source: item.displayLink
-                })));
+            if (imageResults.length > 0) {
+                setImages(imageResults);
             } else {
                 setError('No se encontraron imágenes. Intenta con otros términos o usa "Pegar URL".');
             }
