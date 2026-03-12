@@ -2,6 +2,61 @@
 
 These guidelines define the operational principles and capabilities of an AI agent (e.g., Gemini) interacting with React projects within the Firebase Studio environment. The goal is to enable an efficient, automated, and error-resilient application design and development workflow, focusing on modern React practices.
 
+---
+
+## **Engineering Management Platform — System Scope**
+
+This project is evolving from **AutoBOM Pro** (BOM management) into a full **Engineering Management Platform**. The AI agent must understand the complete system scope and follow the phased development plan.
+
+### **Governance Files**
+
+The following files define the system and must be consulted before implementing any changes:
+
+| File | Purpose |
+|------|---------|
+| `blueprint.md` | Master specification: vision, modules, data model, roadmap |
+| `architecture.md` | Technical architecture: file structure, data flows, design system |
+| `GEMINI.md` | AI development guidelines (this file) |
+
+### **System Modules**
+
+| Module | Status |
+|--------|--------|
+| AutoBOM Core (Projects, Catalog, BOM) | ✅ Complete |
+| AI Import (PDF, Excel) | ✅ Complete |
+| Auth & RBAC | ✅ Complete |
+| Managed Lists | ✅ Complete |
+| Firestore Data Model (new collections) | 📋 Phase 2 |
+| Navigation & Page Structure | 📋 Phase 3 |
+| Projects & Task Management | 📋 Phase 4 |
+| Time Tracking | 📋 Phase 5 |
+| Delays & Risk Detection | 📋 Phase 6 |
+| Reports (Daily/Weekly) | 📋 Phase 7 |
+| Engineering Dashboard (Obeya) | 📋 Phase 8 |
+| Engineering Analytics | 📋 Phase 9 |
+
+### **Development Phase Rules**
+
+1. **Always read `blueprint.md` and `architecture.md`** before starting any new development task.
+2. **Execute one phase at a time.** Do not skip phases or implement multiple phases simultaneously.
+3. **Never break existing AutoBOM functionality.** All changes must be additive and backward-compatible.
+4. **Do not refactor App.jsx aggressively.** Modularize incrementally during Phase 3+.
+5. **Before each phase:** analyze the project, confirm compatibility, preserve existing functionality.
+6. **After each phase:** update `blueprint.md` to reflect completed work and current status.
+7. **Test after every change.** Monitor Vite dev server and browser for errors.
+
+### **Firestore Collections (Current + Planned)**
+
+**Existing:** `users_roles`, `proyectos_bom`, `catalogo_maestro`, `items_bom`, `marcas`, `categorias`, `proveedores`
+
+**Planned (Phase 2+):** `users`, `projects`, `tasks`, `subtasks`, `timeLogs`, `delayCauses`, `delays`, `risks`, `dailyReports`, `notifications`, `taskTypes`, `settings`, `auditLogs`
+
+### **Team Roles**
+
+The system supports: **Manager**, **Team Lead**, **Engineer**, **Technician** — in addition to the existing RBAC roles (admin, editor, viewer).
+
+---
+
 ## **Environment & Context Awareness**
 
 The AI operates within the Firebase Studio development environment, which provides a Code OSS-based IDE with deep integration for React and Firebase services.

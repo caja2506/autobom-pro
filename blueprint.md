@@ -1,52 +1,649 @@
-# AutoBOM Pro Blueprint
+# AutoBOM Pro — Engineering Management Platform Blueprint
 
-## 1. Visión General
+> **Version:** 2.0 — Platform Evolution  
+> **Last Updated:** 2026-03-11  
+> **Status:** Phase 1 Complete — Governance & Architecture Documented
 
-AutoBOM Pro es una aplicación de gestión de "Bill of Materials" (BOM) diseñada para ingenieros y equipos de desarrollo de hardware. Permite crear y gestionar proyectos, mantener un catálogo maestro de componentes y generar listas de materiales de forma manual o automática a través de la importación de PDFs asistida por IA.
+---
 
-## 2. Arquitectura y Diseño
+## Table of Contents
 
-*   **Frontend:** React (Vite) con componentes funcionales y Hooks.
-*   **Base de Datos:** Cloud Firestore para persistencia de datos en tiempo real.
-*   **Estilos:** Tailwind CSS para un diseño moderno y responsivo.
-*   **Componentes:** Utiliza la librería de iconos `lucide-react`.
-*   **Inteligencia Artificial:** Integración con la API de Google Gemini (`gemini-1.5-flash`) para el procesamiento de documentos PDF.
+1. [System Vision](#1-system-vision)
+2. [Platform Evolution](#2-platform-evolution)
+3. [Current System (AutoBOM Pro v3.4)](#3-current-system-autobom-pro-v34)
+4. [Methodology Framework](#4-methodology-framework)
+5. [Team Structure & Roles](#5-team-structure--roles)
+6. [Module Architecture](#6-module-architecture)
+7. [Task Workflow Model](#7-task-workflow-model)
+8. [Time Tracking Model](#8-time-tracking-model)
+9. [Delay Management](#9-delay-management)
+10. [Daily Engineering Reports](#10-daily-engineering-reports)
+11. [Dashboard (Obeya Style)](#11-dashboard-obeya-style)
+12. [Project Risk System](#12-project-risk-system)
+13. [Firestore Data Architecture](#13-firestore-data-architecture)
+14. [Application Pages & Navigation](#14-application-pages--navigation)
+15. [Export Requirements](#15-export-requirements)
+16. [Technology Stack](#16-technology-stack)
+17. [Development Roadmap](#17-development-roadmap)
 
-### Flujo de Datos de IA
+---
 
-1.  **Carga de PDF:** El usuario carga un archivo PDF (cotización, lista de partes) a través de la interfaz.
-2.  **Extracción de Texto:** La librería `pdf.js` se utiliza para extraer el contenido de texto plano del documento.
-3.  **Prompt a Gemini:** Se envía un `prompt` estructurado a la API de Gemini, solicitando la extracción de ítems en un formato JSON específico. El prompt incluye reglas estrictas:
-    *   Ignorar texto irrelevante (encabezados, legales).
-    *   Normalizar campos: limpiar P/N (mayúsculas, sin espacios), resumir descripciones, convertir precios a formato decimal.
-    *   Devolver `""` o `0` para campos faltantes.
-4.  **Revisión en Cliente:** Antes de escribir en la base de datos, la aplicación:
-    *   Carga los P/N del `catalogo_maestro` en el estado de React.
-    *   Compara cada P/N extraído por la IA con la lista en memoria.
-5.  **Escritura en Firestore:**
-    *   **Pieza Nueva:** Si el P/N no existe, se crea un nuevo documento en `catalogo_maestro`.
-    *   **Pieza Existente:** Si el P/N existe, se actualiza el `lastPrice` si es necesario.
-    *   **Vinculación:** Se crea un nuevo documento en `items_bom` que referencia la pieza en el catálogo y la asocia al proyecto actual con su cantidad y precio.
+## 1. System Vision
 
-### Colecciones de Firestore
+Create an **Engineering Management Platform** designed to operate as an internal operating system for an automation engineering department.
 
-*   `proyectos_bom`: Almacena la información principal de cada proyecto (nombre, descripción, fecha).
-*   `catalogo_maestro`: La base de datos centralizada de todas las piezas únicas. **P/N es la clave primaria lógica (siempre en mayúsculas y sin espacios)**.
-*   `items_bom`: La lista de materiales de cada proyecto, vinculando piezas del catálogo a un proyecto.
-*   `marcas`, `categorias`, `proveedores`: Listas gestionables para etiquetar y organizar las piezas.
+The platform must manage:
 
-## 3. Plan de Implementación Actual
+- Engineering projects (including BOM management — existing functionality)
+- Engineering tasks
+- Technician tasks
+- Time tracking
+- Overtime tracking
+- Delay causes
+- Engineering performance metrics
+- Project risk detection
+- Daily engineering reports
 
-**Solicitud:** Aplicar reglas de arquitectura y estilos, asegurando la normalización de P/N y un prompt estricto.
+This system will initially be used **internally** but must be architected so that it can evolve in the future into a **SaaS platform** for automation teams.
 
-**Estado:** Las reglas han sido implementadas exitosamente:
-*   `APP_VERSION` actualizada a 3.3.
-*   Prompt de Gemini endurecido.
-*   Normalización de P/N (sin espacios, mayúsculas) aplicada a importación de Excel, IA y formularios manuales.
+### Core Problems Solved
 
-**Pasos Recientes:**
+| Problem | Solution |
+|---------|----------|
+| Work tracked informally | Structured task management with Kanban workflow |
+| Partial use of Excel | Centralized digital platform |
+| Lack of centralized visibility | Obeya-style dashboard |
+| Project risks detected late | Automated risk scoring system |
+| Overtime not fully tracked | Built-in time & overtime tracking per user |
+| Limited historical metrics | Engineering analytics module |
+| Low traceability | Full linkage between tasks, time, projects, and delays |
 
-1.  **[COMPLETADO]** Leer el archivo `src/App.jsx` para analizar la implementación actual.
-2.  **[COMPLETADO]** Aplicar normalización de Part Number en todos los procesadores de importación y formularios.
-3.  **[COMPLETADO]** Modificar la función `handlePdfUpload` en `src/App.jsx` para actualizar el `prompt` de la IA con reglas más estrictas.
-4.  **[COMPLETADO]** Actualizar la versión de la app.
+---
+
+## 2. Platform Evolution
+
+The platform evolves from the existing **AutoBOM Pro** BOM management application. The evolution preserves all existing AutoBOM functionality while adding engineering management capabilities.
+
+### Evolution Strategy
+
+```
+┌─────────────────────────────────────────────────────┐
+│              AutoBOM Pro (Existing)                  │
+│  ┌─────────────┐  ┌──────────┐  ┌───────────────┐  │
+│  │  Projects    │  │ Catalog  │  │ BOM Items     │  │
+│  │  (BOM)       │  │ Master   │  │ Management    │  │
+│  └─────────────┘  └──────────┘  └───────────────┘  │
+│  ┌─────────────┐  ┌──────────┐  ┌───────────────┐  │
+│  │  AI PDF     │  │ Excel    │  │ Managed Lists │  │
+│  │  Import     │  │ Import   │  │ (Brands/Cat)  │  │
+│  └─────────────┘  └──────────┘  └───────────────┘  │
+├─────────────────────────────────────────────────────┤
+│         Engineering Management (New)                 │
+│  ┌─────────────┐  ┌──────────┐  ┌───────────────┐  │
+│  │  Task       │  │ Time     │  │ Delay         │  │
+│  │  Manager    │  │ Tracking │  │ Management    │  │
+│  └─────────────┘  └──────────┘  └───────────────┘  │
+│  ┌─────────────┐  ┌──────────┐  ┌───────────────┐  │
+│  │  Dashboard  │  │ Reports  │  │ Risk          │  │
+│  │  (Obeya)    │  │ (D/W)    │  │ Detection     │  │
+│  └─────────────┘  └──────────┘  └───────────────┘  │
+│  ┌─────────────┐  ┌──────────┐                      │
+│  │  Analytics  │  │ Team     │                      │
+│  │  Engine     │  │ Mgmt     │                      │
+│  └─────────────┘  └──────────┘                      │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## 3. Current System (AutoBOM Pro v3.4)
+
+### Existing Functionality (PRESERVED)
+
+AutoBOM Pro is a Bill of Materials management application designed for engineers and hardware development teams.
+
+#### Current Features
+
+- **Projects:** Create and manage BOM projects with name, description, and cost tracking
+- **Master Catalog:** Centralized database of unique parts (P/N as logical primary key, uppercase, no spaces)
+- **BOM Items:** Link catalog parts to projects with quantity, pricing, and lead time
+- **AI PDF Import:** Upload PDF quotations → extract text via pdf.js → send to Gemini AI → review → import
+- **Excel Import:** Bulk import catalog items from Excel files
+- **Managed Lists:** Brands (marcas), Categories (categorías), Providers (proveedores)
+- **Image Management:** Search and assign product images via Google Custom Search
+- **Filtering:** Multi-criteria filtering on BOM and Catalog views
+- **RBAC:** Role-based access control (admin, editor, viewer)
+- **Google Auth:** Authentication via Google sign-in
+
+#### Current Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19.2 (Vite 7.3) |
+| Styling | Tailwind CSS 4.2 |
+| Icons | lucide-react |
+| Database | Cloud Firestore |
+| Auth | Firebase Auth (Google) |
+| AI | Gemini 2.5 Flash (via Cloud Functions) |
+| PDF | pdfjs-dist |
+| Excel | xlsx (SheetJS) |
+| Functions | Firebase Cloud Functions v2 |
+
+#### Current Firestore Collections
+
+| Collection | Purpose |
+|------------|---------|
+| `proyectos_bom` | BOM project records |
+| `catalogo_maestro` | Master parts catalog |
+| `items_bom` | BOM line items per project |
+| `marcas` | Managed brands list |
+| `categorias` | Managed categories list |
+| `proveedores` | Managed providers list |
+| `users_roles` | User role assignments |
+
+#### Current Component Structure
+
+```
+src/
+├── App.jsx                          # Main app (1249 lines — monolithic, to be modularized)
+├── App.css                          # Legacy CSS (mostly unused)
+├── main.jsx                         # Entry point with AuthProvider + RoleProvider
+├── firebase.js                      # Firebase config & SDK init
+├── index.css                        # Base styles
+├── components/
+│   ├── admin/
+│   │   └── UserAdminPanel.jsx       # User role management (admin only)
+│   ├── auth/
+│   │   └── LoginPage.jsx            # Google sign-in page
+│   ├── catalog/
+│   │   ├── CatalogPickerModal.jsx   # Select catalog items to add to BOM
+│   │   ├── ImagePickerModal.jsx     # Image search & selection
+│   │   └── MasterRecordModal.jsx    # Create/edit catalog records
+│   ├── projects/
+│   │   ├── BomItemEditModal.jsx     # Edit BOM line item
+│   │   └── PdfReviewModal.jsx       # Review AI-extracted PDF data
+│   └── ui/
+│       ├── ConfirmDialog.jsx        # Confirmation dialog
+│       ├── FilterPopover.jsx        # Multi-criteria filter UI
+│       ├── ListManagerModal.jsx     # CRUD for managed lists
+│       └── SearchableDropdown.jsx   # Searchable select component
+├── contexts/
+│   ├── AuthContext.jsx              # Firebase auth state
+│   └── RoleContext.jsx              # User role state (admin/editor/viewer)
+└── utils/
+    └── normalizers.js               # P/N normalization, provider matching
+```
+
+#### Current AI Data Flow
+
+1. **Upload PDF** → user uploads quotation PDF
+2. **Extract text** → pdf.js extracts plain text
+3. **Cloud Function** → `analyzeQuotePdf` sends text to Gemini with structured prompt
+4. **Review modal** → items classified as new/existing, supplier analyzed
+5. **Batch write** → confirmed items saved to `catalogo_maestro` + `items_bom`
+
+---
+
+## 4. Methodology Framework
+
+### Automation Engineering Agile Framework
+
+A hybrid agile methodology designed specifically for engineering departments.
+
+Combines:
+- **Kanban** workflow
+- **Weekly Scrumban** planning
+- **Lean engineering** principles
+- **Obeya** digital dashboard
+
+### Operational Model
+
+| Day | Activity |
+|-----|----------|
+| **Monday** | Engineering planning meeting: review project status, risks, priorities, team capacity |
+| **Tue–Fri** | Continuous workflow execution: move tasks, track time, log overtime, report delays, update progress |
+
+---
+
+## 5. Team Structure & Roles
+
+### Department Composition
+
+| Role | Count | System Access |
+|------|-------|---------------|
+| Manager | 1 | Reports, dashboard summaries |
+| Team Lead | 1 | Full access, overtime registration |
+| Engineer | 4 | Primary users, task management, time tracking |
+| Technician | 3 | Task updates, time tracking, overtime registration |
+
+### System Roles
+
+| Role | Capabilities |
+|------|-------------|
+| **Manager** | View dashboard, reports, analytics. Read-only on operational data |
+| **Team Lead** | Full task management, time tracking, overtime, team oversight |
+| **Engineer** | Task management, time tracking, validate & complete tasks |
+| **Technician** | Update tasks (up to Validation), time tracking, overtime |
+| **Admin** | System configuration, user management (existing RBAC) |
+
+### Role Mapping (Existing → New)
+
+The existing RBAC system (`admin`, `editor`, `viewer`) will be extended to support the new engineering roles. The `users_roles` collection will be updated to include the new role types.
+
+---
+
+## 6. Module Architecture
+
+### Module Map
+
+| Module | Status | Phase |
+|--------|--------|-------|
+| **AutoBOM Core** (Projects, Catalog, BOM) | ✅ Complete | Existing |
+| **AI Import** (PDF, Excel) | ✅ Complete | Existing |
+| **Auth & RBAC** | ✅ Complete | Existing |
+| **Managed Lists** (Brands, Categories, Providers) | ✅ Complete | Existing |
+| **Firestore Data Model** (new collections) | 📋 Planned | Phase 2 |
+| **Navigation & Page Structure** | 📋 Planned | Phase 3 |
+| **Projects & Task Management** | 📋 Planned | Phase 4 |
+| **Time Tracking** | 📋 Planned | Phase 5 |
+| **Delays & Risk Detection** | 📋 Planned | Phase 6 |
+| **Reports (Daily/Weekly)** | 📋 Planned | Phase 7 |
+| **Engineering Dashboard** | 📋 Planned | Phase 8 |
+| **Engineering Analytics** | 📋 Planned | Phase 9 |
+
+---
+
+## 7. Task Workflow Model
+
+### Primary Workflow
+
+```
+Backlog → Pending → In Progress → Validation → Completed
+```
+
+### Additional States
+
+```
+Blocked (can occur from any active state)
+Cancelled (can occur from any state)
+```
+
+### Workflow Rules
+
+| Rule | Description |
+|------|-------------|
+| Technicians → Validation | Technicians may move tasks to Validation |
+| Engineers → Completed | Engineers confirm completion and move tasks to Completed |
+| Blocked | Any team member can flag a task as Blocked with a reason |
+| Cancelled | Requires Team Lead or Manager approval |
+
+---
+
+## 8. Time Tracking Model
+
+### Individual Tracking
+
+Each user must track time **independently**, even if multiple people work on the same task.
+
+### Timer Operations
+
+- **Start Timer** — begin tracking
+- **Pause Timer** — temporarily suspend tracking
+- **Stop Timer** — end tracking and save log
+
+### Time Log Data Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `taskId` | string | Reference to task |
+| `projectId` | string | Reference to project |
+| `userId` | string | Reference to user |
+| `startTime` | timestamp | When timer started |
+| `endTime` | timestamp | When timer stopped |
+| `totalHours` | number | Calculated duration |
+| `overtime` | boolean | Manually indicated by user |
+| `overtimeHours` | number | Hours classified as overtime |
+| `notes` | string | Optional notes |
+| `createdAt` | timestamp | Log creation time |
+
+### Overtime Rules
+
+- Overtime must be **manually indicated** by the user
+- Roles allowed to register overtime: **Technician, Engineer, Team Lead**
+
+---
+
+## 9. Delay Management
+
+### Configurable Delay Causes
+
+Stored in `delayCauses` collection:
+
+- Missing materials
+- Priority change
+- Production support
+- Engineering decision
+- Technical issue
+- External dependency
+- Waiting for validation
+- Resource unavailable
+
+### Delay Record Structure
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `projectId` | string | Required — linked project |
+| `taskId` | string | Optional — linked task |
+| `cause` | string | Selected from delayCauses |
+| `comment` | string | Additional context |
+| `impact` | string | Optional impact description |
+| `createdBy` | string | User who reported the delay |
+| `createdAt` | timestamp | When the delay was reported |
+
+---
+
+## 10. Daily Engineering Reports
+
+### Auto-Generated Reports
+
+Data sources: `timeLogs`, `tasks`, `delays`
+
+### Report Content (Per Engineer)
+
+- Tasks worked on
+- Hours worked
+- Overtime hours
+- Tasks completed
+- Delays reported
+- Notes summary
+
+### Export
+
+All reports must be exportable to **Excel** (.xlsx).
+
+---
+
+## 11. Dashboard (Obeya Style)
+
+The main dashboard functions as a **digital Obeya center**.
+
+### Dashboard Sections
+
+#### KPI Cards
+- Active projects
+- Projects at risk
+- Delayed tasks
+- Weekly overtime
+- Hours worked today
+
+#### Project Health
+- Project name
+- Progress percentage
+- Overtime accumulated
+- Risk level indicator
+
+#### Daily Team Activity
+- Engineer/Technician name
+- Hours worked today
+- Overtime today
+- Tasks completed today
+
+#### Team Workload
+- Team member
+- Capacity (available hours)
+- Assigned hours
+- Utilization percentage
+- Overload indicator
+
+#### Alerts
+- Delayed tasks
+- Blocked tasks
+- High overtime
+- Projects with active delays
+
+#### Risk Insights
+- Project risk summary
+- Risk factors breakdown
+- Attention recommendations
+
+---
+
+## 12. Project Risk System
+
+### Risk Score Formula
+
+```
+riskScore =
+  (delayedTasks × 20)
+  + (overtimeHours × 2)
+  + (activeDelays × 15)
+  + (tasksInValidation × 10)
+  + (ownerOverloaded ? 15 : 0)
+```
+
+### Risk Classification
+
+| Score Range | Level | Color |
+|-------------|-------|-------|
+| 0–29 | 🟢 Low | Green |
+| 30–59 | 🟡 Medium | Yellow |
+| 60+ | 🔴 High | Red |
+
+### Risk Fields on Project
+
+| Field | Type |
+|-------|------|
+| `riskScore` | number |
+| `riskLevel` | string (low/medium/high) |
+| `riskFactors` | array of strings |
+| `riskSummary` | string |
+
+> **Note:** The formula must remain configurable via the `settings` collection.
+
+---
+
+## 13. Firestore Data Architecture
+
+### Complete Collections Map
+
+#### Existing Collections (PRESERVED)
+
+| Collection | Fields | Status |
+|------------|--------|--------|
+| `users_roles` | name, email, role, photoURL, createdAt | ✅ Exists — will extend with engineering roles |
+| `proyectos_bom` | name, description, createdAt | ✅ Exists — will extend with risk, status fields |
+| `catalogo_maestro` | name, partNumber, lastPrice, brand, category, defaultProvider, leadTimeWeeks, imageUrl | ✅ Exists |
+| `items_bom` | projectId, masterPartRef, quantity, unitPrice, totalPrice, proveedor, prcr, status, leadTimeWeeks, addedAt | ✅ Exists |
+| `marcas` | name | ✅ Exists |
+| `categorias` | name | ✅ Exists |
+| `proveedores` | name | ✅ Exists |
+
+#### New Collections (Phase 2)
+
+| Collection | Purpose | Key Fields |
+|------------|---------|------------|
+| `users` | Extended user profiles | name, email, role, department, capacity, active, createdAt |
+| `projects` | Engineering projects (extends proyectos_bom concept) | name, description, client, priority, status, ownerId, startDate, dueDate, progress, riskScore, riskLevel |
+| `tasks` | Engineering tasks | projectId, title, description, status, priority, engineerId, technicianId, estimatedHours, dueDate, createdAt |
+| `subtasks` | Task subtasks | taskId, title, status |
+| `timeLogs` | Time tracking entries | taskId, projectId, userId, startTime, endTime, totalHours, overtime, overtimeHours, notes, createdAt |
+| `delayCauses` | Configurable delay reasons | name, active |
+| `delays` | Delay records | projectId, taskId, cause, comment, impact, createdBy, createdAt |
+| `risks` | Risk calculations | projectId, riskScore, riskLevel, riskFactors, riskSummary, calculatedAt |
+| `dailyReports` | Auto-generated daily reports | date, userId, data, createdAt |
+| `notifications` | System notifications | userId, type, message, read, createdAt |
+| `taskTypes` | Configurable task types | name, icon, color |
+| `settings` | System configuration | key, value, updatedAt |
+| `auditLogs` | System audit trail | action, userId, collection, documentId, changes, timestamp |
+
+---
+
+## 14. Application Pages & Navigation
+
+### Navigation Structure
+
+| Page | Icon | Description |
+|------|------|-------------|
+| **Dashboard** | LayoutDashboard | Obeya-style overview (default landing) |
+| **My Work** | User | Active tasks, running timers, today's summary |
+| **Projects** | FolderGit2 | Engineering projects + BOM management |
+| **Task Manager** | ListTodo | Kanban board, task CRUD |
+| **Work Logs** | Clock | Time entries, overtime tracking |
+| **Daily Reports** | FileText | Auto-generated daily summaries |
+| **Weekly Reports** | BarChart3 | Weekly analytics and trends |
+| **Team** | Users | Team member overview and workload |
+| **Notifications** | Bell | System alerts and updates |
+| **Admin / Settings** | Settings | Configuration, user management, delay causes |
+
+### Default Landing View ("My Work")
+
+- User's active tasks
+- Running timers
+- Today's work summary
+- Overtime today
+- Recent activity feed
+
+---
+
+## 15. Export Requirements
+
+The system must support **Excel export** for:
+
+- Project status reports
+- Work logs (time entries)
+- Overtime reports
+- Daily reports
+- Weekly reports
+- Dashboard summaries
+
+---
+
+## 16. Technology Stack
+
+### Current (Preserved)
+
+| Technology | Purpose |
+|-----------|---------|
+| React 19.2 + Vite 7.3 | Frontend framework & build tool |
+| Tailwind CSS 4.2 | Styling |
+| Cloud Firestore | Database |
+| Firebase Auth | Authentication |
+| Firebase Cloud Functions v2 | Server-side logic |
+| lucide-react | Icons |
+| pdfjs-dist | PDF text extraction |
+| xlsx (SheetJS) | Excel import/export |
+| Gemini 2.5 Flash | AI document analysis |
+
+### Planned Additions
+
+| Technology | Purpose | Phase |
+|-----------|---------|-------|
+| react-router-dom | Client-side routing | Phase 3 |
+| recharts or @nivo/bar | Chart/graph components for dashboard | Phase 8 |
+| date-fns or dayjs | Date/time utilities for time tracking | Phase 5 |
+| react-beautiful-dnd or @dnd-kit | Drag-and-drop for Kanban board | Phase 4 |
+
+---
+
+## 17. Development Roadmap
+
+### Phase 1 — Project Analysis & Documentation ✅
+> **Status:** COMPLETE
+
+- [x] Analyze current project structure
+- [x] Identify existing modules and components
+- [x] Document current Firestore collections
+- [x] Map component hierarchy
+- [x] Update blueprint.md with full system vision
+- [x] Create architecture.md
+- [x] Update GEMINI.md with new scope
+
+### Phase 2 — Firestore Data Model ✅
+> **Status:** COMPLETE
+
+- [x] Design and document new collection schemas (`src/models/schemas.js`)
+- [x] Define relationships and references between collections
+- [x] Propose Firestore indexes for common queries (`firestore.indexes.json`)
+- [x] Create seed data utilities (`src/utils/seedData.js`)
+- [x] Prepare analytics foundation (risk calculation engine in schemas)
+- [x] Update Firestore security rules for new collections (`firestore.rules`)
+
+### Phase 3 — Navigation & Application Structure ✅
+> **Status:** COMPLETE
+
+- [x] Install and configure react-router-dom
+- [x] Create page placeholder components (Dashboard, MyWork, TaskManager, WorkLogs, DailyReports, WeeklyReports, Team, Notifications)
+- [x] Implement sidebar navigation with new pages (desktop + mobile)
+- [x] Preserve existing AutoBOM modules (Projects, Catalog, BOM) — all functional
+- [x] Begin modularizing App.jsx (1249→85 lines, extracted to AppDataContext + pages)
+- [x] Add mobile-responsive navigation (bottom nav bar)
+
+### Phase 4 — Projects & Task Management ✅
+> **Status:** COMPLETE
+
+- [x] Extend project model with engineering fields (ProjectModal + Projects page)
+- [x] Create task CRUD interface (TaskDetailModal with full form)
+- [x] Implement Kanban board view (5-column board with filters)
+- [x] Implement subtask management (SubtaskList with checklist)
+- [x] Apply workflow state machine (Backlog → Completed + Blocked/Cancelled)
+- [x] Role-based task operations (canEdit/canDelete checks throughout)
+
+### Phase 5 — Time Tracking ✅
+> **Status:** COMPLETE
+
+- [x] Build timer component (start/pause/stop) — ActiveTimer with live countdown
+- [x] Create time log entries in Firestore — timeService with localStorage persistence
+- [x] Implement overtime toggle and tracking — Zap badge + amber styling
+- [x] Work log history view — Weekly navigation + per-entry display
+- [x] Per-task and per-project time aggregation — Stats cards + POR PROYECTO breakdown
+
+### Phase 6 — Delays & Risk Detection
+> **Status:** PLANNED
+
+- [ ] Create delay causes configuration (admin)
+- [ ] Build delay reporting interface
+- [ ] Link delays to tasks and projects
+- [ ] Implement risk score calculation
+- [ ] Add risk level indicators to project views
+- [ ] Create risk alerts
+
+### Phase 7 — Reports
+> **Status:** PLANNED
+
+- [ ] Auto-generate daily engineering reports
+- [ ] Build daily report viewer
+- [ ] Implement weekly report aggregation
+- [ ] Excel export for all report types
+- [ ] Report filtering by date, team member, project
+
+### Phase 8 — Engineering Dashboard
+> **Status:** PLANNED
+
+- [ ] Build Obeya-style dashboard layout
+- [ ] Implement KPI cards with real-time data
+- [ ] Project health overview
+- [ ] Daily team activity feed
+- [ ] Team workload visualization
+- [ ] Alert panel
+- [ ] Risk insights section
+
+### Phase 9 — Engineering Analytics
+> **Status:** PLANNED
+
+- [ ] Historical performance metrics
+- [ ] Trend analysis (overtime, delays, velocity)
+- [ ] Team utilization analytics
+- [ ] Project completion forecasting
+- [ ] Export analytics to Excel
+
+---
+
+## Appendix A: Execution Rules
+
+1. **Use this blueprint as the master specification** for all development phases
+2. **Do not execute all phases simultaneously** — proceed one phase at a time
+3. **Before each phase:** analyze the project, confirm compatibility, preserve existing functionality
+4. **Never break existing AutoBOM functionality** — all changes must be additive
+5. **Do not refactor aggressively** — modularize incrementally
+6. **Always analyze before implementing** — read existing code before writing new code
+7. **Update this blueprint** after completing each phase
