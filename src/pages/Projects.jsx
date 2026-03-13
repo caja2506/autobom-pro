@@ -4,9 +4,9 @@ import { useRole } from '../contexts/RoleContext';
 import { useAppData } from '../contexts/AppDataContext';
 import {
     FolderGit2, Plus, Trash2, Edit3, ChevronRight,
-    Clock, ListTodo, AlertTriangle, Users as UsersIcon
+    Clock, ListTodo, AlertTriangle, Users as UsersIcon, Shield, AlertOctagon
 } from 'lucide-react';
-import { PROJECT_STATUS_CONFIG, TASK_PRIORITY_CONFIG } from '../models/schemas';
+import { PROJECT_STATUS_CONFIG, TASK_PRIORITY_CONFIG, RISK_LEVEL_CONFIG } from '../models/schemas';
 import ProjectModal from '../components/tasks/ProjectModal';
 import { deleteProject } from '../services/taskService';
 
@@ -32,15 +32,15 @@ export default function Projects() {
             />
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/70 backdrop-blur-sm p-6 rounded-2xl border border-slate-800 shadow-lg">
                 <div>
-                    <h2 className="font-black text-2xl text-slate-800 tracking-tight">Proyectos de Ingeniería</h2>
+                    <h2 className="font-black text-2xl text-white tracking-tight">Proyectos de Ingeniería</h2>
                     <p className="text-xs text-slate-400 font-bold mt-1">{engProjects.length} proyecto{engProjects.length !== 1 ? 's' : ''}</p>
                 </div>
                 {canEdit && (
                     <button
                         onClick={openNew}
-                        className="bg-indigo-600 text-white px-6 py-4 rounded-2xl font-black shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+                        className="bg-indigo-600 text-white px-6 py-4 rounded-xl font-black shadow-lg shadow-indigo-500/20 flex items-center justify-center active:scale-95 transition-transform border border-indigo-500"
                     >
                         <Plus className="mr-2" /> Nuevo Proyecto
                     </button>
@@ -49,12 +49,12 @@ export default function Projects() {
 
             {/* Project Grid */}
             {engProjects.length === 0 ? (
-                <div className="bg-white rounded-3xl border border-slate-100 p-16 text-center">
-                    <FolderGit2 className="w-16 h-16 text-slate-200 mx-auto mb-4" />
+                <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-16 text-center">
+                    <FolderGit2 className="w-16 h-16 text-slate-700 mx-auto mb-4" />
                     <h3 className="text-lg font-bold text-slate-400 mb-2">Sin proyectos de ingeniería</h3>
-                    <p className="text-sm text-slate-300 mb-6">Crea tu primer proyecto para empezar a gestionar tareas</p>
+                    <p className="text-sm text-slate-500 mb-6">Crea tu primer proyecto para empezar a gestionar tareas</p>
                     {canEdit && (
-                        <button onClick={openNew} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-md">
+                        <button onClick={openNew} className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-500/20 border border-indigo-500">
                             <Plus className="w-4 h-4 inline mr-2" /> Crear proyecto
                         </button>
                     )}
@@ -74,7 +74,7 @@ export default function Projects() {
                         return (
                             <div
                                 key={project.id}
-                                className="bg-white rounded-3xl border-2 border-slate-100 hover:border-indigo-200 shadow-sm transition-all group cursor-pointer overflow-hidden"
+                                className="bg-slate-900/70 rounded-2xl border border-slate-800 hover:border-indigo-500/50 shadow-lg transition-all group cursor-pointer overflow-hidden backdrop-blur-sm"
                                 onClick={() => openEdit(project)}
                             >
                                 {/* Status bar */}
@@ -83,20 +83,41 @@ export default function Projects() {
                                 <div className="p-5 space-y-4">
                                     {/* Top badges */}
                                     <div className="flex items-center justify-between">
-                                        <span
-                                            className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg"
-                                            style={{ backgroundColor: `${statusCfg.color}15`, color: statusCfg.color }}
-                                        >
-                                            {statusCfg.icon} {statusCfg.label}
-                                        </span>
-                                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full text-${priorityCfg.color}-600 bg-${priorityCfg.color}-50`}>
-                                            {priorityCfg.icon} {priorityCfg.label}
+                                        <div className="flex items-center gap-2">
+                                            <span
+                                                className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg"
+                                                style={{ backgroundColor: `${statusCfg.color}15`, color: statusCfg.color }}
+                                            >
+                                                {statusCfg.icon} {statusCfg.label}
+                                            </span>
+                                            {(() => {
+                                                const riskLevel = project.riskLevel || 'low';
+                                                const riskConfig = RISK_LEVEL_CONFIG[riskLevel];
+                                                if (!riskConfig) return null;
+                                                return (
+                                                    <span
+                                                        className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 ${riskLevel === 'high' ? 'text-red-600 bg-red-50 border border-red-200' :
+                                                                riskLevel === 'medium' ? 'text-amber-600 bg-amber-50 border border-amber-200' :
+                                                                    'text-green-600 bg-green-50 border border-green-200'
+                                                            }`}
+                                                        title={project.riskSummary || 'Riesgo del proyecto'}
+                                                    >
+                                                        {riskLevel === 'high' ? <AlertOctagon className="w-3 h-3" /> :
+                                                            riskLevel === 'medium' ? <AlertTriangle className="w-3 h-3" /> :
+                                                                <Shield className="w-3 h-3" />}
+                                                        {riskConfig.label}
+                                                    </span>
+                                                );
+                                            })()}
+                                        </div>
+                                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 text-${priorityCfg.color}-600 bg-${priorityCfg.color}-50`}>
+                                            <AlertTriangle className="w-3 h-3" /> {priorityCfg.label}
                                         </span>
                                     </div>
 
                                     {/* Name */}
                                     <div>
-                                        <h3 className="font-black text-lg text-slate-800 leading-tight group-hover:text-indigo-700 transition-colors line-clamp-2">
+                                        <h3 className="font-black text-lg text-slate-200 leading-tight group-hover:text-indigo-400 transition-colors line-clamp-2">
                                             {project.name}
                                         </h3>
                                         {project.description && (
@@ -111,7 +132,7 @@ export default function Projects() {
                                                 <span><ListTodo className="w-3 h-3 inline mr-0.5" /> {completedTasks}/{totalTasks} tareas</span>
                                                 <span>{progress}%</span>
                                             </div>
-                                            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                                                 <div
                                                     className={`h-full rounded-full transition-all duration-500 ${progress === 100 ? 'bg-green-500' : 'bg-indigo-500'}`}
                                                     style={{ width: `${progress}%` }}
@@ -121,7 +142,7 @@ export default function Projects() {
                                     )}
 
                                     {/* Bottom info */}
-                                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                                    <div className="flex items-center justify-between pt-2 border-t border-slate-800">
                                         <div className="flex items-center gap-2">
                                             {owner && (
                                                 <div className="flex items-center gap-1.5">

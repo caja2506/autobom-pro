@@ -13,6 +13,7 @@ import ConfirmDialog from '../ui/ConfirmDialog';
 import MasterRecordModal from '../catalog/MasterRecordModal';
 import PdfReviewModal from '../projects/PdfReviewModal';
 import ImagePickerModal from '../catalog/ImagePickerModal';
+import DelayReportModal from '../delays/DelayReportModal';
 
 export default function AppLayout() {
     const {
@@ -41,11 +42,12 @@ export default function AppLayout() {
 
         // Data
         managedLists,
+        taskTypes,
         catalogo,
     } = useAppData();
 
     return (
-        <div className="h-screen flex flex-col md:flex-row bg-slate-50 text-slate-900 font-sans overflow-hidden">
+        <div className="h-screen flex flex-col md:flex-row bg-slate-950 text-slate-100 font-sans overflow-hidden">
 
             {/* ===== PROCESSING PANEL ===== */}
             {(isDiagnosticOpen || isProcessing) && (
@@ -75,7 +77,11 @@ export default function AppLayout() {
             {listManager.isOpen && (
                 <ListManagerModal
                     title={listManager.title}
-                    items={managedLists[listManager.type === 'category' ? 'categories' : listManager.type + 's']?.map(i => i.name) || []}
+                    items={
+                        listManager.type === 'taskType'
+                            ? (taskTypes || []).map(t => t.name)
+                            : managedLists[listManager.type === 'category' ? 'categories' : listManager.type + 's']?.map(i => i.name) || []
+                    }
                     onClose={() => setListManager({ isOpen: false, type: null, title: '' })}
                     onSave={(data) => handleSaveManagedList({ type: listManager.type, data })}
                 />
@@ -113,6 +119,9 @@ export default function AppLayout() {
                 itemName={imagePickerItem?.name}
                 partNumber={imagePickerItem?.partNumber}
             />
+
+            {/* ===== DELAY REPORT MODAL ===== */}
+            <DelayReportModal />
 
             {/* ===== IMAGE LIGHTBOX ===== */}
             {zoomedImageUrl && (

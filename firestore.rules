@@ -53,6 +53,12 @@ service cloud.firestore {
       allow read: if isAuthenticated();
     }
 
+    // WeeklyPlanItems: authenticated users can fully manage their own planning blocks
+    // This is placed at global level to ensure it overrides any potential conflicts
+    match /weeklyPlanItems/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
     // ============================================================
     // EXISTING COLLECTIONS (preserved — no changes)
     // ============================================================
@@ -212,6 +218,11 @@ service cloud.firestore {
     // No updates or deletes allowed
     match /auditLogs/{docId} {
       allow create: if isAdmin();
+    }
+    // --- weeklyPlanItems ---
+    // Any authenticated user can plan work (same pattern as tasks)
+    match /weeklyPlanItems/{docId} {
+      allow create, update, delete: if isAuthenticated();
     }
   }
 }

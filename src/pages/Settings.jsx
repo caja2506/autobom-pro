@@ -1,6 +1,7 @@
 import React from 'react';
 import { useRole } from '../contexts/RoleContext';
 import UserAdminPanel from '../components/admin/UserAdminPanel';
+import DelayCausesAdmin from '../components/admin/DelayCausesAdmin';
 import { Settings as SettingsIcon, Shield } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -18,18 +19,19 @@ export default function SettingsPage() {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
-            <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="bg-slate-900/70 backdrop-blur-sm p-6 rounded-2xl border border-slate-800 shadow-lg">
                 <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">
-                        <SettingsIcon className="w-6 h-6 text-indigo-600" />
+                    <div className="w-12 h-12 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl flex items-center justify-center">
+                        <SettingsIcon className="w-6 h-6 text-indigo-400" />
                     </div>
                     <div>
-                        <h2 className="font-black text-2xl text-slate-800 tracking-tight">Configuración</h2>
+                        <h2 className="font-black text-2xl text-white tracking-tight">Configuración</h2>
                         <p className="text-xs text-slate-400 font-bold">Panel de administración del sistema</p>
                     </div>
                 </div>
             </div>
             <UserAdminPanel />
+            <DelayCausesAdmin />
         </div>
     );
 }

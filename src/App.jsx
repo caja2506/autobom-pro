@@ -21,6 +21,9 @@ import Projects from './pages/Projects';
 import WorkLogs from './pages/WorkLogs';
 import DailyReports from './pages/DailyReports';
 import WeeklyReports from './pages/WeeklyReports';
+import EngineeringAnalytics from './pages/EngineeringAnalytics';
+import WeeklyPlanner from './pages/WeeklyPlanner';
+import ProjectGantt from './pages/ProjectGantt';
 import Team from './pages/Team';
 import Notifications from './pages/Notifications';
 import SettingsPage from './pages/Settings';
@@ -72,6 +75,9 @@ export default function App() {
         <Route path="/work-logs" element={<WorkLogs />} />
         <Route path="/reports/daily" element={<DailyReports />} />
         <Route path="/reports/weekly" element={<WeeklyReports />} />
+        <Route path="/analytics" element={<EngineeringAnalytics />} />
+        <Route path="/planner" element={<WeeklyPlanner />} />
+        <Route path="/gantt" element={<ProjectGantt />} />
 
         {/* Team */}
         <Route path="/team" element={<Team />} />

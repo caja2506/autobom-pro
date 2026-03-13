@@ -89,12 +89,12 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
 
     return (
         <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[350] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col animate-in zoom-in duration-200 overflow-hidden">
+            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 w-full max-w-5xl h-[90vh] flex flex-col animate-in zoom-in duration-200 overflow-hidden">
 
                 {/* ===== HEADER ===== */}
-                <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-indigo-50/30">
+                <div className="p-6 border-b border-slate-800 bg-gradient-to-r from-slate-50 to-indigo-50/30">
                     <div className="flex justify-between items-center">
-                        <h2 className="font-black text-2xl flex items-center text-slate-800 tracking-tight">
+                        <h2 className="font-black text-2xl flex items-center text-white tracking-tight">
                             <Sparkles className="mr-3 text-yellow-500 w-7 h-7 fill-yellow-400" />
                             Revisión de Cotización
                         </h2>
@@ -109,14 +109,14 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
 
                     {/* --- SECCIÓN 1: PROVEEDOR --- */}
                     {supplierName && (
-                        <div className={`rounded-2xl border p-5 ${hasExactMatch ? 'bg-green-50 border-green-200' : hasSimilarMatches ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+                        <div className={`rounded-2xl border p-5 ${hasExactMatch ? 'bg-green-500/15 border-green-200' : hasSimilarMatches ? 'bg-amber-500/15 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
                             <h3 className="font-black text-sm uppercase tracking-widest text-slate-500 mb-3 flex items-center">
                                 🚚 Proveedor Detectado
                             </h3>
-                            <p className="font-bold text-lg text-slate-800 mb-3">"{supplierName}"</p>
+                            <p className="font-bold text-lg text-white mb-3">"{supplierName}"</p>
 
                             {hasExactMatch && (
-                                <div className="flex items-center gap-2 text-green-700 bg-green-100 px-4 py-2 rounded-xl">
+                                <div className="flex items-center gap-2 text-green-400 bg-green-100 px-4 py-2 rounded-xl">
                                     <Check className="w-5 h-5" />
                                     <span className="font-bold text-sm">Proveedor existente encontrado: <strong>{supplierAnalysis.exactMatch.name}</strong></span>
                                 </div>
@@ -124,29 +124,29 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
 
                             {hasSimilarMatches && !hasExactMatch && (
                                 <div className="space-y-3">
-                                    <div className="flex items-center gap-2 text-amber-700 mb-2">
+                                    <div className="flex items-center gap-2 text-amber-400 mb-2">
                                         <AlertTriangle className="w-5 h-5" />
                                         <span className="font-bold text-sm">Proveedores similares encontrados</span>
                                     </div>
 
-                                    <label className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-sm bg-white border-slate-200"
+                                    <label className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-lg bg-slate-900 border-slate-700"
                                         onClick={() => { setSupplierAction('use_existing'); setSelectedSimilarId(supplierAnalysis.similarMatches[0].id); }}>
                                         <input type="radio" name="supplier" checked={supplierAction === 'use_existing'} onChange={() => { }} className="w-4 h-4 accent-indigo-600" />
                                         <div>
-                                            <span className="font-bold text-sm text-slate-800">Usar existente:</span>
+                                            <span className="font-bold text-sm text-white">Usar existente:</span>
                                             {supplierAnalysis.similarMatches.map(s => (
                                                 <button key={s.id} onClick={(e) => { e.stopPropagation(); setSelectedSimilarId(s.id); setSupplierAction('use_existing'); }}
-                                                    className={`ml-2 px-3 py-1 rounded-lg text-sm font-bold transition-all ${selectedSimilarId === s.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                                                    className={`ml-2 px-3 py-1 rounded-lg text-sm font-bold transition-all ${selectedSimilarId === s.id ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-600 hover:bg-slate-200'}`}>
                                                     {s.name}
                                                 </button>
                                             ))}
                                         </div>
                                     </label>
 
-                                    <label className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-sm bg-white border-slate-200"
+                                    <label className="flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all hover:shadow-lg bg-slate-900 border-slate-700"
                                         onClick={() => setSupplierAction('create_new')}>
                                         <input type="radio" name="supplier" checked={supplierAction === 'create_new'} onChange={() => { }} className="w-4 h-4 accent-indigo-600" />
-                                        <span className="font-bold text-sm text-slate-800">Crear nuevo: <strong className="text-indigo-600">"{supplierName}"</strong></span>
+                                        <span className="font-bold text-sm text-white">Crear nuevo: <strong className="text-indigo-400">"{supplierName}"</strong></span>
                                     </label>
                                 </div>
                             )}
@@ -163,7 +163,7 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                     {/* --- SECCIÓN 2: PRCR + RESUMEN --- */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
-                            <label className="font-black text-sm uppercase tracking-widest text-amber-700 mb-2 flex items-center">
+                            <label className="font-black text-sm uppercase tracking-widest text-amber-400 mb-2 flex items-center">
                                 <Hash className="w-4 h-4 mr-2" /> PRCR
                             </label>
                             <input
@@ -171,19 +171,19 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                                 value={prcr}
                                 onChange={e => setPrcr(e.target.value)}
                                 placeholder="Ej: PRCR-2025-001"
-                                className="w-full p-3.5 border border-amber-200 rounded-xl bg-white font-bold font-mono uppercase outline-none focus:ring-2 focus:ring-amber-400 text-lg"
+                                className="w-full p-3.5 border border-amber-200 rounded-xl bg-slate-900 font-bold font-mono uppercase outline-none focus:ring-2 focus:ring-amber-400 text-lg"
                             />
-                            <p className="text-xs text-amber-600 mt-2">Se aplicará a todos los ítems importados</p>
+                            <p className="text-xs text-amber-400 mt-2">Se aplicará a todos los ítems importados</p>
                         </div>
 
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex items-center justify-around">
+                        <div className="rounded-2xl border border-slate-700 bg-slate-800 p-5 flex items-center justify-around">
                             <div className="text-center">
-                                <div className="text-3xl font-black text-slate-800">{stats.selected}</div>
+                                <div className="text-3xl font-black text-white">{stats.selected}</div>
                                 <div className="text-[10px] font-black text-slate-400 uppercase">Seleccionados</div>
                             </div>
                             <div className="w-px h-12 bg-slate-200"></div>
                             <div className="text-center">
-                                <div className="text-3xl font-black text-emerald-600">{stats.new}</div>
+                                <div className="text-3xl font-black text-emerald-400">{stats.new}</div>
                                 <div className="text-[10px] font-black text-emerald-500 uppercase">Nuevos</div>
                             </div>
                             <div className="w-px h-12 bg-slate-200"></div>
@@ -195,9 +195,9 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                     </div>
 
                     {/* --- SECCIÓN 3: TABLA DE ÍTEMS --- */}
-                    <div className="rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="rounded-2xl border border-slate-700 overflow-hidden">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-100 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            <thead className="bg-slate-800 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                 <tr>
                                     <th className="p-4 w-10 text-center">
                                         <input type="checkbox" className="w-4 h-4 accent-indigo-600"
@@ -213,10 +213,10 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                                     <th className="p-4 w-28 text-right">Total</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-800">
                                 {items.map(item => (
                                     <tr key={item.id}
-                                        className={`transition-all cursor-pointer ${item.isSelected ? 'bg-white hover:bg-slate-50' : 'bg-slate-50/50 opacity-50'}`}
+                                        className={`transition-all cursor-pointer ${item.isSelected ? 'bg-slate-900 hover:bg-slate-700' : 'bg-slate-800/50 opacity-50'}`}
                                         onClick={() => toggleItem(item.id)}>
                                         <td className="p-4 text-center" onClick={e => e.stopPropagation()}>
                                             <input type="checkbox" className="w-4 h-4 accent-indigo-600"
@@ -225,7 +225,7 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                                         </td>
                                         <td className="p-4">
                                             {item.isNew ? (
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase bg-emerald-100 text-emerald-400 border border-emerald-200">
                                                     🆕 Nuevo
                                                 </span>
                                             ) : (
@@ -235,13 +235,13 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                                             )}
                                         </td>
                                         <td className="p-4 font-mono font-bold text-xs text-slate-600">{item.pn}</td>
-                                        <td className="p-4 font-bold text-slate-800 leading-tight text-sm">{item.description}</td>
+                                        <td className="p-4 font-bold text-white leading-tight text-sm">{item.description}</td>
                                         <td className="p-4 text-center font-black text-slate-700">{item.quantity}</td>
                                         <td className="p-4 text-center">
                                             {item.leadTimeWeeks != null ? <span className="text-sm font-bold text-teal-700">{item.leadTimeWeeks} sem</span> : <span className="text-slate-300 text-xs">—</span>}
                                         </td>
                                         <td className="p-4 text-right font-bold text-slate-600">${(item.unitPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                        <td className="p-4 text-right font-black text-green-700">${((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-4 text-right font-black text-green-400">${((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -250,17 +250,17 @@ const PdfReviewModal = ({ isOpen, onClose, onConfirm, extractedData, supplierAna
                 </div>
 
                 {/* ===== FOOTER ===== */}
-                <div className="p-4 border-t border-slate-200 bg-white shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
+                <div className="p-4 border-t border-slate-700 bg-slate-900 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-10">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                         <div className="text-sm text-slate-500">
-                            <span className="font-bold text-slate-900">{stats.selected}</span> de {stats.total} ítems seleccionados
-                            {prcr && <span className="ml-3 px-2 py-1 bg-amber-100 text-amber-700 rounded-lg text-xs font-bold">PRCR: {prcr}</span>}
-                            <div className="mt-1 text-lg font-black text-green-700">
+                            <span className="font-bold text-slate-100">{stats.selected}</span> de {stats.total} ítems seleccionados
+                            {prcr && <span className="ml-3 px-2 py-1 bg-amber-100 text-amber-400 rounded-lg text-xs font-bold">PRCR: {prcr}</span>}
+                            <div className="mt-1 text-lg font-black text-green-400">
                                 Total: ${items.filter(i => i.isSelected).reduce((sum, i) => sum + (i.quantity || 0) * (i.unitPrice || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                             </div>
                         </div>
                         <div className="flex gap-3 w-full sm:w-auto">
-                            <button onClick={onClose} className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-colors">
+                            <button onClick={onClose} className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-800 transition-colors">
                                 Cancelar
                             </button>
                             <button

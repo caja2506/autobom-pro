@@ -59,6 +59,8 @@ export function AppDataProvider({ children }) {
     const [taskTypes, setTaskTypes] = useState([]);
     const [teamMembers, setTeamMembers] = useState([]);
     const [timeLogs, setTimeLogs] = useState([]);
+    const [delayCauses, setDelayCauses] = useState([]);
+    const [delays, setDelays] = useState([]);
 
     // ============================================================
     // PROCESSING STATE
@@ -88,6 +90,10 @@ export function AppDataProvider({ children }) {
     const [isPdfReviewOpen, setIsPdfReviewOpen] = useState(false);
     const [pdfReviewData, setPdfReviewData] = useState(null);
     const [pdfSupplierAnalysis, setPdfSupplierAnalysis] = useState(null);
+
+    // Delay Report Modal
+    const [isDelayReportOpen, setIsDelayReportOpen] = useState(false);
+    const [delayReportTarget, setDelayReportTarget] = useState(null); // { type: 'project' | 'task', id, projectId }
 
     // Refs
     const pdfInputRef = useRef(null);
@@ -135,12 +141,19 @@ export function AppDataProvider({ children }) {
         const unsubTimeLogs = onSnapshot(collection(db, COLLECTIONS.TIME_LOGS), s =>
             setTimeLogs(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => new Date(b.startTime || 0) - new Date(a.startTime || 0)))
         );
+        const unsubDelayCauses = onSnapshot(collection(db, COLLECTIONS.DELAY_CAUSES), s =>
+            setDelayCauses(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => (a.order || 0) - (b.order || 0)))
+        );
+        const unsubDelays = onSnapshot(collection(db, COLLECTIONS.DELAYS), s =>
+            setDelays(s.docs.map(d => ({ ...d.data(), id: d.id })).sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)))
+        );
 
         return () => {
             unsubProyectos(); unsubCatalogo(); unsubBom();
             unsubCategories(); unsubProviders(); unsubBrands();
             unsubEngProjects(); unsubEngTasks(); unsubEngSubtasks();
             unsubTaskTypes(); unsubTeamMembers(); unsubTimeLogs();
+            unsubDelayCauses(); unsubDelays();
         };
     }, []);
 
@@ -476,8 +489,28 @@ export function AppDataProvider({ children }) {
     const handleSaveManagedList = async ({ type, data }) => {
         const { renames, deleted, added } = data;
         const batch = writeBatch(db);
-        const masterCatalogRef = collection(db, 'catalogo_maestro');
 
+        // ── Task Types: simple add/rename/delete (no foreign-key refs to clean) ──
+        if (type === 'taskType') {
+            const snap = await getDocs(collection(db, COLLECTIONS.TASK_TYPES));
+            const existing = snap.docs.map(d => ({ id: d.id, name: d.data()?.name })).filter(d => d.name);
+            deleted.forEach(name => {
+                const found = existing.find(d => d.name === name);
+                if (found) batch.delete(doc(db, COLLECTIONS.TASK_TYPES, found.id));
+            });
+            renames.forEach(({ oldName, newName }) => {
+                const found = existing.find(d => d.name === oldName);
+                if (found) batch.update(doc(db, COLLECTIONS.TASK_TYPES, found.id), { name: newName });
+            });
+            added.forEach(name => {
+                if (!existing.some(d => d.name.toLowerCase() === name.toLowerCase()))
+                    batch.set(doc(collection(db, COLLECTIONS.TASK_TYPES)), { name });
+            });
+            await batch.commit();
+            return;
+        }
+
+        const masterCatalogRef = collection(db, 'catalogo_maestro');
         let collectionName = '', fieldName = '';
         if (type === 'category') { collectionName = 'categorias'; fieldName = 'category'; }
         else if (type === 'provider') { collectionName = 'proveedores'; fieldName = 'defaultProvider'; }
@@ -512,6 +545,7 @@ export function AppDataProvider({ children }) {
 
         await batch.commit();
     };
+
 
     // ============================================================
     // HANDLERS — BOM Items
@@ -588,6 +622,8 @@ export function AppDataProvider({ children }) {
         taskTypes,
         teamMembers,
         timeLogs,
+        delayCauses,
+        delays,
 
         // Computed
         brandOptions,
@@ -610,6 +646,8 @@ export function AppDataProvider({ children }) {
         isPdfReviewOpen, setIsPdfReviewOpen,
         pdfReviewData, setPdfReviewData,
         pdfSupplierAnalysis, setPdfSupplierAnalysis,
+        isDelayReportOpen, setIsDelayReportOpen,
+        delayReportTarget, setDelayReportTarget,
 
         // Refs
         pdfInputRef,

@@ -68,11 +68,11 @@ export default function UserAdminPanel({ onClose }) {
             {/* Confirm Dialog */}
             {confirmAction && (
                 <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full">
-                        <h3 className="font-black text-lg text-slate-800 mb-2">{confirmAction.title}</h3>
+                    <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 p-6 max-w-sm w-full">
+                        <h3 className="font-black text-lg text-white mb-2">{confirmAction.title}</h3>
                         <p className="text-sm text-slate-500 mb-6">{confirmAction.message}</p>
                         <div className="flex gap-3 justify-end">
-                            <button onClick={() => setConfirmAction(null)} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100">
+                            <button onClick={() => setConfirmAction(null)} className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-800">
                                 Cancelar
                             </button>
                             <button onClick={confirmAction.onConfirm} className="px-4 py-2 rounded-xl text-sm font-bold bg-red-500 text-white hover:bg-red-600">
@@ -84,13 +84,13 @@ export default function UserAdminPanel({ onClose }) {
             )}
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-lg">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">
-                        <Users className="w-6 h-6 text-indigo-600" />
+                    <div className="w-12 h-12 bg-indigo-600/20 rounded-2xl flex items-center justify-center">
+                        <Users className="w-6 h-6 text-indigo-400" />
                     </div>
                     <div>
-                        <h2 className="font-black text-2xl text-slate-800 tracking-tight">Usuarios</h2>
+                        <h2 className="font-black text-2xl text-white tracking-tight">Usuarios</h2>
                         <p className="text-xs text-slate-400 font-bold">{users.length} usuarios registrados</p>
                     </div>
                 </div>
@@ -102,7 +102,7 @@ export default function UserAdminPanel({ onClose }) {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Buscar usuario..."
-                            className="w-full pl-9 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                            className="w-full pl-9 pr-4 py-3 border border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
                         />
                     </div>
                 </div>
@@ -120,9 +120,9 @@ export default function UserAdminPanel({ onClose }) {
             </div>
 
             {/* Users Table */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+            <div className="bg-slate-900/70 rounded-2xl border border-slate-800 shadow-lg overflow-auto" style={{ maxHeight: 'calc(100vh - 320px)' }}>
                 <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
+                    <thead className="bg-slate-800 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
                         <tr>
                             <th className="p-5">Usuario</th>
                             <th className="p-5 w-48">Rol</th>
@@ -135,16 +135,16 @@ export default function UserAdminPanel({ onClose }) {
                             const isSelf = u.uid === currentUser.uid;
                             const roleConfig = ROLE_CONFIG[u.role] || ROLE_CONFIG.viewer;
                             return (
-                                <tr key={u.uid} className="hover:bg-slate-50/50 transition-colors">
+                                <tr key={u.uid} className="hover:bg-slate-800/50 transition-colors">
                                     <td className="p-5">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm font-bold flex-shrink-0">
+                                            <div className="w-9 h-9 rounded-full bg-indigo-600/20 flex items-center justify-center text-indigo-400 text-sm font-bold flex-shrink-0">
                                                 {(u.displayName || u.email || '?')[0].toUpperCase()}
                                             </div>
                                             <div className="min-w-0">
-                                                <div className="font-bold text-slate-800 text-sm truncate">
+                                                <div className="font-bold text-white text-sm truncate">
                                                     {u.displayName || 'Sin nombre'}
-                                                    {isSelf && <span className="ml-2 text-[10px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-black">TÚ</span>}
+                                                    {isSelf && <span className="ml-2 text-[10px] bg-indigo-600/20 text-indigo-400 px-2 py-0.5 rounded-full font-black">TÚ</span>}
                                                 </div>
                                                 <div className="text-[11px] text-slate-400 truncate">{u.email}</div>
                                             </div>
@@ -158,7 +158,7 @@ export default function UserAdminPanel({ onClose }) {
                                                     onClick={() => handleRoleChange(u.uid, roleKey)}
                                                     className={`px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all ${u.role === roleKey
                                                             ? `bg-${config.color}-100 text-${config.color}-700 border-2 border-${config.color}-300 shadow-sm`
-                                                            : 'bg-slate-50 text-slate-400 border-2 border-transparent hover:bg-slate-100'
+                                                            : 'bg-slate-800 text-slate-400 border-2 border-transparent hover:bg-slate-800'
                                                         }`}
                                                 >
                                                     {config.label}
@@ -175,7 +175,7 @@ export default function UserAdminPanel({ onClose }) {
                                         {!isSelf && (
                                             <button
                                                 onClick={() => handleRemoveUser(u)}
-                                                className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"
+                                                className="p-2 text-red-500 bg-red-500/15 rounded-lg hover:bg-red-100 transition-all active:scale-90"
                                                 title="Eliminar usuario"
                                             >
                                                 <Trash2 className="w-4 h-4" />

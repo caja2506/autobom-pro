@@ -43,6 +43,9 @@ export const COLLECTIONS = {
     TASK_TYPES: 'taskTypes',
     SETTINGS: 'settings',
     AUDIT_LOGS: 'auditLogs',
+    WEEKLY_PLAN_ITEMS: 'weeklyPlanItems',
+    TASK_DEPENDENCIES: 'taskDependencies',
+    TASK_TYPE_CATEGORIES: 'taskTypeCategories',
 };
 
 
@@ -357,6 +360,16 @@ export function createTaskDocument({
     blockedReason = '',             // If status === 'blocked'
     tags = [],
     order = 0,                      // Kanban column order
+    // --- Gantt fields ---
+    showInGantt = false,            // Whether this task appears in Gantt view
+    plannedStartDate = null,        // ISO string — Gantt start
+    plannedEndDate = null,          // ISO string — Gantt end
+    plannedDurationHours = 0,       // Planned duration in hours
+    percentComplete = 0,            // 0–100 progress percentage
+    milestone = false,              // If true, renders as diamond ◆
+    summaryTask = false,            // If true, renders as collapsed header bar
+    parentTaskId = null,            // For WBS hierarchy
+    ganttViewModeDefault = null,    // 'weekly' | 'monthly' | null
 } = {}) {
     return {
         projectId,
@@ -375,6 +388,16 @@ export function createTaskDocument({
         blockedReason,
         tags,
         order,
+        // Gantt
+        showInGantt,
+        plannedStartDate,
+        plannedEndDate,
+        plannedDurationHours,
+        percentComplete,
+        milestone,
+        summaryTask,
+        parentTaskId,
+        ganttViewModeDefault,
         createdBy: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -641,6 +664,102 @@ export function createAuditLogDocument({
         changes,
         metadata,
         timestamp: new Date().toISOString(),
+    };
+}
+
+/**
+ * WeeklyPlanItems Collection
+ * Represents a single block of time planned for a task in the Weekly Planner.
+ *
+ * Document ID: auto-generated
+ */
+export function createWeeklyPlanItemDocument({
+    taskId = null,                  // Reference to tasks document
+    taskTitleSnapshot = '',         // Denormalized for display
+    projectId = null,               // Reference to projects document
+    projectNameSnapshot = '',       // Denormalized for display
+    assignedTo = null,              // User UID
+    assignedToName = '',            // Denormalized for display
+    weekStartDate = '',             // ISO YYYY-MM-DD
+    date = '',                      // Date of this block: YYYY-MM-DD
+    dayOfWeek = 1,                  // 0 = Sunday, 1 = Monday, etc.
+    startDateTime = null,           // ISO datetime string
+    endDateTime = null,             // ISO datetime string
+    plannedHours = 0,               // Calculated: end - start
+    priority = TASK_PRIORITY.MEDIUM, // Snapshot from task
+    statusSnapshot = TASK_STATUS.PENDING, // Snapshot from task
+    colorKey = 'indigo',            // Visual color grouping
+    notes = '',
+    createdBy = null,
+} = {}) {
+    return {
+        taskId,
+        taskTitleSnapshot,
+        projectId,
+        projectNameSnapshot,
+        assignedTo,
+        assignedToName,
+        weekStartDate,
+        date,
+        dayOfWeek,
+        startDateTime,
+        endDateTime,
+        plannedHours,
+        priority,
+        statusSnapshot,
+        colorKey,
+        notes,
+        createdBy,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    };
+}
+
+/**
+ * TaskDependencies Collection
+ * Represents a dependency link between two tasks.
+ *
+ * Document ID: auto-generated
+ */
+export function createTaskDependencyDocument({
+    predecessorTaskId = null,       // ID of the task that must happen first
+    successorTaskId = null,         // ID of the task that depends on the predecessor
+    type = 'FS',                    // 'FS' (Finish-to-Start) | 'SS' (Start-to-Start)
+    lagHours = 0,                   // Optional lag in hours between tasks
+    projectId = null,               // Denormalized for query efficiency
+    createdBy = null,
+} = {}) {
+    return {
+        predecessorTaskId,
+        successorTaskId,
+        type,
+        lagHours,
+        projectId,
+        createdBy,
+        createdAt: new Date().toISOString(),
+    };
+}
+
+/**
+ * TaskTypeCategories Collection
+ * Visual grouping of task types for Gantt color coding.
+ *
+ * Document ID: auto-generated
+ */
+export function createTaskTypeCategoryDocument({
+    name = '',
+    color = 'indigo',              // Tailwind color name — used for Gantt bar color
+    icon = 'Layers',               // lucide-react icon name
+    order = 0,
+    active = true,
+} = {}) {
+    return {
+        name,
+        color,
+        icon,
+        order,
+        active,
+        createdAt: new Date().toISOString(),
     };
 }
 

@@ -5,9 +5,10 @@
 import { db } from '../firebase';
 import {
     collection, doc, setDoc, updateDoc, deleteDoc,
-    query, where, getDocs, orderBy,
+    query, where, getDocs, orderBy, getDoc
 } from 'firebase/firestore';
 import { COLLECTIONS, createTimeLogDocument } from '../models/schemas';
+import { calculateProjectRisk } from './riskService';
 
 // ============================================================
 // ACTIVE TIMER — stored in localStorage + Firestore
@@ -92,6 +93,10 @@ export async function stopTimer(logId, { notes = '', overtime = false } = {}) {
         await recalculateTaskHours(timer.taskId);
     }
 
+    if (timer.projectId && (overtime || overtimeHours > 0)) {
+        await calculateProjectRisk(timer.projectId);
+    }
+
     setActiveTimer(null);
     return { totalHours, overtimeHours, taskId: timer.taskId };
 }
@@ -166,6 +171,10 @@ export async function createManualTimeLog({
     // Recalculate task hours
     if (taskId) await recalculateTaskHours(taskId);
 
+    if (projectId && (overtime || overtimeHours > 0)) {
+        await calculateProjectRisk(projectId);
+    }
+
     return ref.id;
 }
 
@@ -181,13 +190,23 @@ export async function updateTimeLog(logId, updates) {
         }
     }
     await updateDoc(doc(db, COLLECTIONS.TIME_LOGS, logId), updates);
+
+    // If overtime was involved, recalculate risk.
+    // Need to get the document to know projectId.
+    if (updates.overtime !== undefined) {
+        const snap = await getDoc(doc(db, COLLECTIONS.TIME_LOGS, logId));
+        if (snap.exists() && snap.data().projectId) {
+            await calculateProjectRisk(snap.data().projectId);
+        }
+    }
 }
 
-export async function deleteTimeLog(logId, taskId = null) {
+export async function deleteTimeLog(logId, taskId = null, projectId = null) {
     try {
         await deleteDoc(doc(db, COLLECTIONS.TIME_LOGS, logId));
         // Recalculate task hours after deletion
         if (taskId) await recalculateTaskHours(taskId);
+        if (projectId) await calculateProjectRisk(projectId);
     } catch (err) {
         console.error('CRITICAL: Error deleting time log:', err);
         throw err; // Re-throw to be caught in UI

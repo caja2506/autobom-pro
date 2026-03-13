@@ -15,6 +15,7 @@ import {
     createTaskDocument,
     createSubtaskDocument,
 } from '../models/schemas';
+import { calculateProjectRisk } from './riskService';
 
 // ============================================================
 // ENGINEERING PROJECTS
@@ -71,7 +72,7 @@ export async function updateTask(taskId, updates) {
     });
 }
 
-export async function updateTaskStatus(taskId, newStatus) {
+export async function updateTaskStatus(taskId, newStatus, projectId) {
     const updates = {
         status: newStatus,
         updatedAt: new Date().toISOString(),
@@ -80,6 +81,11 @@ export async function updateTaskStatus(taskId, newStatus) {
         updates.completedDate = new Date().toISOString();
     }
     await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), updates);
+
+    // Recalculate risk if project is known
+    if (projectId) {
+        await calculateProjectRisk(projectId);
+    }
 }
 
 export async function deleteTask(taskId) {

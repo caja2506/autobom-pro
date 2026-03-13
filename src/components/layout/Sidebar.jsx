@@ -6,7 +6,7 @@ import { useAppData, APP_VERSION } from '../../contexts/AppDataContext';
 import {
     BrainCircuit, Activity, LayoutDashboard, User, FolderGit2,
     ListTodo, Database, Clock, FileText, BarChart3, Users,
-    Bell, Settings, LogOut, Shield, Truck, Tag, LayoutList, Briefcase,
+    Bell, Settings, LogOut, Shield, Truck, Tag, LayoutList, Briefcase, LineChart, CalendarDays, GanttChartSquare
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -19,8 +19,12 @@ const NAV_ITEMS = [
     { to: '/projects', label: 'Proyectos', icon: Briefcase, section: 'engineering', countKey: 'engProjects' },
     { to: '/tasks', label: 'Tareas', icon: ListTodo, section: 'engineering', countKey: 'engTasks' },
     { to: '/work-logs', label: 'Registro Horas', icon: Clock, section: 'engineering' },
+    { to: '/planner', label: 'Weekly Planner', icon: CalendarDays, section: 'engineering' },
+    { to: '/gantt', label: 'Project Gantt', icon: GanttChartSquare, section: 'engineering' },
+    { divider: true, label: 'Reportes y Analítica' },
     { to: '/reports/daily', label: 'Reporte Diario', icon: FileText, section: 'reports' },
     { to: '/reports/weekly', label: 'Reporte Semanal', icon: BarChart3, section: 'reports' },
+    { to: '/analytics', label: 'Analítica', icon: LineChart, section: 'reports' },
     { divider: true, label: 'Equipo' },
     { to: '/team', label: 'Equipo', icon: Users, section: 'team' },
     { to: '/notifications', label: 'Notificaciones', icon: Bell, section: 'team' },

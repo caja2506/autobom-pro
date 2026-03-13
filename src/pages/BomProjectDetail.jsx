@@ -152,10 +152,10 @@ export default function BomProjectDetail() {
             )}
 
             {/* Header */}
-            <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-md flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
+            <div className="bg-slate-900/70 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-slate-800 shadow-lg flex flex-col md:flex-row justify-between items-center gap-6 relative overflow-hidden">
                 <div className="text-center md:text-left">
                     <button onClick={() => navigate('/bom/projects')} className="text-indigo-600 font-bold text-sm flex items-center mb-1 hover:underline"><ArrowLeft className="w-4 h-4 mr-1" /> Volver</button>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">{activeProject.name}</h2>
+                    <h2 className="text-3xl font-black text-white tracking-tight">{activeProject.name}</h2>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                     {canEdit && (
@@ -172,7 +172,7 @@ export default function BomProjectDetail() {
                             </div>
                         </div>
                     )}
-                    <div className="bg-green-50 border border-green-100 px-4 py-3 rounded-2xl text-right w-full sm:w-auto sm:min-w-[140px] flex flex-col justify-center">
+                    <div className="bg-emerald-500/15 border border-emerald-500/30 px-4 py-3 rounded-2xl text-right w-full sm:w-auto sm:min-w-[140px] flex flex-col justify-center">
                         <div className="text-[10px] font-black text-green-800 uppercase tracking-widest leading-none mb-1">Inversión</div>
                         <div className="text-2xl font-black text-green-700 tracking-tighter leading-none">
                             ${(activeBomItems || []).reduce((s, i) => s + (i.totalPrice || 0), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -191,7 +191,7 @@ export default function BomProjectDetail() {
                                 value={bomFilters.search}
                                 onChange={e => setBomFilters({ ...bomFilters, search: e.target.value })}
                                 placeholder="Buscar en BOM..."
-                                className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                className="pl-12 pr-4 py-3 w-full border border-slate-700 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800 text-white"
                             />
                         </div>
                         <FilterPopover
@@ -229,9 +229,9 @@ export default function BomProjectDetail() {
                     )}
 
                     {/* BOM Table */}
-                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+                    <div className="bg-slate-900/70 rounded-2xl border border-slate-800 shadow-lg overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 z-10">
+                            <thead className="bg-slate-800/80 border-b border-slate-700 text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0 z-10">
                                 <tr>
                                     {isBomEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllBomItems(filteredActiveBomItems)} checked={filteredActiveBomItems.length > 0 && selectedBomItems.length === filteredActiveBomItems.length} /></th>}
                                     <th className="p-5 w-32 text-center">Visual</th>
@@ -243,7 +243,7 @@ export default function BomProjectDetail() {
                                     {isBomEditMode && <th className="p-5 text-center w-28">Acciones</th>}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
+                            <tbody className="divide-y divide-slate-800">
                                 {(filteredActiveBomItems || []).map(item => {
                                     let details = {}; let providerName = '';
                                     const isSelected = selectedBomItems.includes(item.id);

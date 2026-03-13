@@ -57,16 +57,16 @@ export default function ManualTimeEntry({
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md animate-in zoom-in-95 duration-200">
+            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 w-full max-w-md animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                <div className="flex items-center justify-between p-6 border-b border-slate-800">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-green-100 rounded-2xl flex items-center justify-center">
-                            <Clock className="w-5 h-5 text-green-600" />
+                            <Clock className="w-5 h-5 text-green-400" />
                         </div>
                         <h2 className="font-black text-lg tracking-tight">Registro Manual</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl">
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-800 rounded-xl">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -84,7 +84,7 @@ export default function ManualTimeEntry({
                                 const t = tasks.find(t => t.id === e.target.value);
                                 if (t?.projectId) setForm(f => ({ ...f, projectId: t.projectId }));
                             }}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                            className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                         >
                             <option value="">Sin tarea</option>
                             {tasks.map(t => (
@@ -101,7 +101,7 @@ export default function ManualTimeEntry({
                         <select
                             value={form.projectId}
                             onChange={e => setForm({ ...form, projectId: e.target.value })}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                            className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                         >
                             <option value="">Sin proyecto</option>
                             {projects.map(p => (
@@ -117,7 +117,7 @@ export default function ManualTimeEntry({
                             type="date"
                             value={form.date}
                             onChange={e => setForm({ ...form, date: e.target.value })}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                            className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                         />
                     </div>
 
@@ -129,7 +129,7 @@ export default function ManualTimeEntry({
                                 type="time"
                                 value={form.startHour}
                                 onChange={e => setForm({ ...form, startHour: e.target.value })}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                             />
                         </div>
                         <div>
@@ -138,14 +138,14 @@ export default function ManualTimeEntry({
                                 type="time"
                                 value={form.endHour}
                                 onChange={e => setForm({ ...form, endHour: e.target.value })}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                             />
                         </div>
                     </div>
 
                     {/* Preview */}
                     <div className="text-center py-2">
-                        <span className="text-3xl font-black text-indigo-600 tabular-nums">{previewHours}h</span>
+                        <span className="text-3xl font-black text-indigo-400 tabular-nums">{previewHours}h</span>
                         <p className="text-[10px] text-slate-400 font-bold mt-0.5">Horas calculadas</p>
                     </div>
 
@@ -158,12 +158,12 @@ export default function ManualTimeEntry({
                             value={form.notes}
                             onChange={e => setForm({ ...form, notes: e.target.value })}
                             placeholder="¿Qué hiciste?"
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                            className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                         />
                     </div>
 
                     {/* Overtime toggle */}
-                    <label className="flex items-center gap-3 px-3 py-2 bg-amber-50 rounded-xl cursor-pointer">
+                    <label className="flex items-center gap-3 px-3 py-2 bg-amber-500/15 rounded-xl cursor-pointer">
                         <input
                             type="checkbox"
                             checked={form.overtime}
@@ -172,16 +172,16 @@ export default function ManualTimeEntry({
                         />
                         <div className="flex items-center gap-1.5">
                             <Zap className="w-4 h-4 text-amber-500" />
-                            <span className="text-xs font-bold text-amber-700">Tiempo extra</span>
+                            <span className="text-xs font-bold text-amber-400">Tiempo extra</span>
                         </div>
                     </label>
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-slate-100 flex gap-3">
+                <div className="p-6 border-t border-slate-800 flex gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 px-4 py-3 border border-slate-200 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-all"
+                        className="flex-1 px-4 py-3 border border-slate-700 rounded-2xl font-bold text-slate-500 hover:bg-slate-800 transition-all"
                     >
                         Cancelar
                     </button>

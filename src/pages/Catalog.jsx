@@ -76,7 +76,7 @@ export default function Catalog() {
                 <div className="flex flex-wrap gap-2 items-center">
                     <div className="relative w-full sm:flex-1 sm:min-w-[200px]">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input value={catalogFilters.search} onChange={e => setCatalogFilters({ ...catalogFilters, search: e.target.value })} placeholder="Filtrar por nombre, P/N..." className="pl-12 pr-4 py-3 w-full border border-slate-200 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500" />
+                        <input value={catalogFilters.search} onChange={e => setCatalogFilters({ ...catalogFilters, search: e.target.value })} placeholder="Filtrar por nombre, P/N..." className="pl-12 pr-4 py-3 w-full border border-slate-700 rounded-2xl text-sm shadow-inner outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800 text-white" />
                     </div>
                     <FilterPopover
                         filters={catalogFilters}
@@ -94,7 +94,7 @@ export default function Catalog() {
                     {canEdit && (
                         <button
                             onClick={() => { setIsCatalogEditMode(!isCatalogEditMode); setSelectedCatalogItems([]); }}
-                            className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${isCatalogEditMode ? 'bg-amber-100 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                            className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${isCatalogEditMode ? 'bg-amber-500/15 border-amber-500/30 text-amber-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
                         >
                             <SlidersHorizontal className="w-4 h-4" />
                             <span className="font-bold text-sm hidden sm:inline">Gestionar</span>
@@ -113,17 +113,17 @@ export default function Catalog() {
                 </div>
 
                 {selectedCatalogItems.length > 0 && isCatalogEditMode && canDelete && (
-                    <div className="bg-red-50 border border-red-200 p-3 rounded-2xl flex items-center justify-between animate-in fade-in duration-300">
-                        <span className="font-bold text-red-700 text-sm">{selectedCatalogItems.length} ítems seleccionados</span>
+                    <div className="bg-red-500/10 border border-red-500/30 p-3 rounded-2xl flex items-center justify-between animate-in fade-in duration-300">
+                        <span className="font-bold text-red-400 text-sm">{selectedCatalogItems.length} ítems seleccionados</span>
                         <button onClick={handleDeleteSelectedCatalog} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg flex items-center text-sm">
                             <Trash2 className="w-4 h-4 mr-2" /> Eliminar Seleccionados
                         </button>
                     </div>
                 )}
 
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+                <div className="bg-slate-900/70 rounded-2xl border border-slate-800 shadow-lg overflow-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
                     <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 border-b text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
+                        <thead className="bg-slate-800/80 border-b border-slate-700 text-[10px] font-black text-slate-400 uppercase tracking-widest sticky top-0">
                             <tr>
                                 {isCatalogEditMode && <th className="p-5 w-10 text-center"><input type="checkbox" className="w-4 h-4" onChange={() => handleToggleSelectAllCatalog(filteredCatalogo)} checked={selectedCatalogItems.length === filteredCatalogo.length && filteredCatalogo.length > 0} /></th>}
                                 <th className="p-5 w-32"></th>
@@ -133,13 +133,13 @@ export default function Catalog() {
                                 {isCatalogEditMode && <th className="p-5 text-center">⚙️</th>}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-800">
                             {filteredCatalogo.map(item => {
                                 const isSelected = selectedCatalogItems.includes(item.id);
                                 const brandName = item.brand ? managedLists.brands.find(b => b.id === item.brand.id)?.name : '';
                                 const categoryName = item.category ? managedLists.categories.find(c => c.id === item.category.id)?.name : '';
                                 return (
-                                    <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                                    <tr key={item.id} className={`group transition-colors ${isSelected ? 'bg-indigo-500/10' : 'hover:bg-slate-800/70'}`}>
                                         {isCatalogEditMode && <td className="p-5 text-center"><input type="checkbox" className="w-4 h-4" checked={isSelected} onChange={() => handleToggleSelectCatalogItem(item.id)} /></td>}
                                         <td className="p-3">
                                             <div className="w-[120px] h-[120px] relative" onDoubleClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })} title="Doble clic para cambiar">
@@ -149,15 +149,15 @@ export default function Catalog() {
                                                             src={item.imageUrl}
                                                             alt=""
                                                             onClick={() => setZoomedImageUrl(item.imageUrl)}
-                                                            className="w-full h-full object-contain rounded-xl border-2 border-slate-200 bg-white transition-all duration-300 cursor-zoom-in hover:border-indigo-400 hover:shadow-lg p-1"
+                                                            className="w-full h-full object-contain rounded-xl border-2 border-slate-700 bg-slate-800 transition-all duration-300 cursor-zoom-in hover:border-indigo-400 hover:shadow-lg p-1"
                                                             onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
                                                         />
-                                                        <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl"><Camera className="w-6 h-6 text-slate-300" /></div>
+                                                        <div style={{ display: 'none' }} className="absolute inset-0 items-center justify-center bg-slate-800 border-2 border-dashed border-slate-700 rounded-xl"><Camera className="w-6 h-6 text-slate-500" /></div>
                                                     </>
                                                 ) : (
                                                     <button
                                                         onClick={() => setImagePickerItem({ id: item.id, name: item.name, partNumber: item.partNumber })}
-                                                        className="w-full h-full rounded-xl border-2 border-dashed border-slate-200 hover:border-indigo-400 bg-slate-50 transition-all flex items-center justify-center text-slate-300 hover:text-indigo-500"
+                                                        className="w-full h-full rounded-xl border-2 border-dashed border-slate-700 hover:border-indigo-400 bg-slate-800 transition-all flex items-center justify-center text-slate-500 hover:text-indigo-400"
                                                         title="Agregar imagen"
                                                     >
                                                         <Camera className="w-6 h-6" />
@@ -166,22 +166,22 @@ export default function Catalog() {
                                             </div>
                                         </td>
                                         <td className="p-5">
-                                            <div className="font-bold text-slate-800 text-base leading-tight">{item.name || 'Sin nombre'}</div>
+                                            <div className="font-bold text-white text-base leading-tight">{item.name || 'Sin nombre'}</div>
                                             <div className="text-[10px] font-mono text-slate-500 mt-1">{item.partNumber}</div>
                                             <div className="flex items-center flex-wrap gap-2 mt-2">
-                                                {brandName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-gray-600 bg-gray-100 border-gray-200"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0" />{brandName}</div>}
-                                                {categoryName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-purple-600 bg-purple-50 border-purple-100"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0" />{categoryName}</div>}
+                                                {brandName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-slate-300 bg-slate-800 border-slate-700"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0" />{brandName}</div>}
+                                                {categoryName && <div className="flex items-center justify-center h-6 px-2 rounded-full border text-[9px] font-black uppercase tracking-tighter text-purple-400 bg-purple-500/15 border-purple-500/30"><Tag className="w-3 h-3 mr-1.5 flex-shrink-0" />{categoryName}</div>}
                                             </div>
                                         </td>
                                         <td className="p-5 text-center">
-                                            {item.leadTimeWeeks != null ? <span className="text-sm font-bold text-teal-700">{item.leadTimeWeeks} sem</span> : <span className="text-slate-300 text-xs">—</span>}
+                                            {item.leadTimeWeeks != null ? <span className="text-sm font-bold text-teal-400">{item.leadTimeWeeks} sem</span> : <span className="text-slate-500 text-xs">—</span>}
                                         </td>
-                                        <td className="p-5 text-right font-black text-green-700 text-lg">${(item.lastPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td className="p-5 text-right font-black text-green-400 text-lg">${(item.lastPrice || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                         {isCatalogEditMode && (
                                             <td className="p-5 text-center">
                                                 <div className="flex justify-center items-center gap-2">
-                                                    {canEdit && <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="p-2 text-amber-500 bg-amber-50 rounded-lg hover:bg-amber-100 transition-all active:scale-90"><Edit3 className="w-4 h-4" /></button>}
-                                                    {canDelete && <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) }); }} className="p-2 text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-all active:scale-90"><Trash2 className="w-4 h-4" /></button>}
+                                                    {canEdit && <button onClick={(e) => { e.stopPropagation(); handleEditClick(item); }} className="p-2 text-amber-400 bg-amber-500/15 rounded-lg hover:bg-amber-500/25 transition-all active:scale-90"><Edit3 className="w-4 h-4" /></button>}
+                                                    {canDelete && <button onClick={(e) => { e.stopPropagation(); setConfirmDelete({ isOpen: true, title: 'Borrar Maestro', message: `¿Eliminar "${item.name}" del catálogo global?`, onConfirm: () => deleteDoc(doc(db, 'catalogo_maestro', item.id)) }); }} className="p-2 text-red-400 bg-red-500/15 rounded-lg hover:bg-red-500/25 transition-all active:scale-90"><Trash2 className="w-4 h-4" /></button>}
                                                 </div>
                                             </td>
                                         )}

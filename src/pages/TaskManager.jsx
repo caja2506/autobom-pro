@@ -39,8 +39,8 @@ function KanbanColumn({ status, children, taskCount }) {
             <div className="flex items-center justify-between mb-3 px-1">
                 <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cfg.color }} />
-                    <h3 className="text-xs font-black text-slate-600 uppercase tracking-widest">{cfg.label}</h3>
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{cfg.label}</h3>
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded-full">
                         {taskCount}
                     </span>
                 </div>
@@ -50,7 +50,7 @@ function KanbanColumn({ status, children, taskCount }) {
             <div
                 ref={setNodeRef}
                 className={`flex-1 space-y-3 overflow-y-auto pr-1 scrollbar-thin pb-2 rounded-2xl transition-all duration-200 ${isOver
-                    ? 'bg-indigo-50/70 ring-2 ring-indigo-300 ring-dashed p-2'
+                    ? 'bg-indigo-500/10 ring-2 ring-indigo-500/40 ring-dashed p-2'
                     : 'p-0'
                     }`}
                 style={{ minHeight: '120px' }}
@@ -170,7 +170,7 @@ export default function TaskManager() {
 
         // Optimistic update is handled by Firestore subscription
         try {
-            await updateTaskStatus(taskId, targetStatus);
+            await updateTaskStatus(taskId, targetStatus, task.projectId);
 
             // Auto-Timer logic for IN_PROGRESS
             if (targetStatus === TASK_STATUS.IN_PROGRESS && task.status !== TASK_STATUS.IN_PROGRESS) {
@@ -209,16 +209,16 @@ export default function TaskManager() {
             />
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/70 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 shadow-lg flex-shrink-0">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center">
-                        <ListTodo className="w-5 h-5 text-indigo-600" />
+                    <div className="w-10 h-10 bg-indigo-600/20 border border-indigo-500/30 rounded-xl flex items-center justify-center">
+                        <ListTodo className="w-5 h-5 text-indigo-400" />
                     </div>
                     <div>
-                        <h2 className="font-black text-xl text-slate-800 tracking-tight">Tablero de Tareas</h2>
+                        <h2 className="font-black text-xl text-white tracking-tight">Tablero de Tareas</h2>
                         <p className="text-[10px] text-slate-400 font-bold">
                             {engTasks.length} tarea{engTasks.length !== 1 ? 's' : ''} en total
-                            <span className="text-slate-300 mx-1.5">•</span>
+                            <span className="text-slate-600 mx-1.5">•</span>
                             <ArrowRight className="w-3 h-3 inline text-indigo-400" /> Arrastra para mover
                         </p>
                     </div>
@@ -226,7 +226,7 @@ export default function TaskManager() {
                 {canEdit && (
                     <button
                         onClick={openNew}
-                        className="bg-indigo-600 text-white px-5 py-3 rounded-2xl font-black shadow-lg flex items-center justify-center active:scale-95 transition-transform text-sm"
+                        className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-black shadow-lg shadow-indigo-500/20 flex items-center justify-center active:scale-95 transition-transform text-sm border border-indigo-500"
                     >
                         <Plus className="mr-2 w-4 h-4" /> Nueva Tarea
                     </button>
@@ -234,20 +234,20 @@ export default function TaskManager() {
             </div>
 
             {/* Filters */}
-            <div className="flex flex-wrap gap-2 items-center bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex-shrink-0">
+            <div className="flex flex-wrap gap-2 items-center bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex-shrink-0">
                 <div className="relative flex-1 min-w-[180px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                     <input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         placeholder="Buscar tareas..."
-                        className="pl-10 pr-4 py-2.5 w-full border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                        className="pl-10 pr-4 py-2.5 w-full border border-slate-700 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                     />
                 </div>
                 <select
                     value={filterProject}
                     onChange={e => setFilterProject(e.target.value)}
-                    className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 min-w-[140px]"
+                    className="px-3 py-2.5 border border-slate-700 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800 min-w-[140px]"
                 >
                     <option value="">Todos los proyectos</option>
                     {engProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -255,7 +255,7 @@ export default function TaskManager() {
                 <select
                     value={filterAssignee}
                     onChange={e => setFilterAssignee(e.target.value)}
-                    className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 min-w-[140px]"
+                    className="px-3 py-2.5 border border-slate-700 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800 min-w-[140px]"
                 >
                     <option value="">Todos los miembros</option>
                     {teamMembers.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>)}
@@ -263,7 +263,7 @@ export default function TaskManager() {
                 <select
                     value={filterPriority}
                     onChange={e => setFilterPriority(e.target.value)}
-                    className="px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50 min-w-[120px]"
+                    className="px-3 py-2.5 border border-slate-700 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800 min-w-[120px]"
                 >
                     <option value="">Todas las prioridades</option>
                     {Object.entries(TASK_PRIORITY_CONFIG).map(([key, cfg]) => (
@@ -291,8 +291,8 @@ export default function TaskManager() {
                                         strategy={verticalListSortingStrategy}
                                     >
                                         {columnTasks.length === 0 ? (
-                                            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center min-h-[80px] flex items-center justify-center">
-                                                <p className="text-[11px] text-slate-300 font-bold">Sin tareas</p>
+                                            <div className="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center min-h-[80px] flex items-center justify-center">
+                                                <p className="text-[11px] text-slate-600 font-bold">Sin tareas</p>
                                             </div>
                                         ) : (
                                             columnTasks.map(task => (
@@ -335,12 +335,12 @@ export default function TaskManager() {
 
             {/* Blocked / Cancelled Section */}
             {(blockedTasks.length > 0 || cancelledTasks.length > 0) && (
-                <div className="bg-white rounded-2xl border border-slate-100 p-4 flex-shrink-0">
+                <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-4 flex-shrink-0">
                     {blockedTasks.length > 0 && (
                         <div className="mb-4">
                             <div className="flex items-center gap-2 mb-3">
                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TASK_STATUS_CONFIG.blocked.color }} />
-                                <h3 className="text-xs font-black text-red-600 uppercase tracking-widest">
+                                <h3 className="text-xs font-black text-red-400 uppercase tracking-widest">
                                     Bloqueadas ({blockedTasks.length})
                                 </h3>
                             </div>
@@ -362,7 +362,7 @@ export default function TaskManager() {
                         <div>
                             <div className="flex items-center gap-2 mb-3">
                                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TASK_STATUS_CONFIG.cancelled.color }} />
-                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                                <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">
                                     Canceladas ({cancelledTasks.length})
                                 </h3>
                             </div>

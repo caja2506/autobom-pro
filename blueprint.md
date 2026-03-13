@@ -250,6 +250,7 @@ The existing RBAC system (`admin`, `editor`, `viewer`) will be extended to suppo
 | **Reports (Daily/Weekly)** | 📋 Planned | Phase 7 |
 | **Engineering Dashboard** | 📋 Planned | Phase 8 |
 | **Engineering Analytics** | 📋 Planned | Phase 9 |
+| **Project Gantt (Weekly + Monthly)** | 📋 Planned | Phase 10 |
 
 ---
 
@@ -597,44 +598,57 @@ The system must support **Excel export** for:
 - [x] Work log history view — Weekly navigation + per-entry display
 - [x] Per-task and per-project time aggregation — Stats cards + POR PROYECTO breakdown
 
-### Phase 6 — Delays & Risk Detection
-> **Status:** PLANNED
+### Phase 6 — Delays & Risk Detection ✅
+> **Status:** COMPLETE
 
-- [ ] Create delay causes configuration (admin)
-- [ ] Build delay reporting interface
-- [ ] Link delays to tasks and projects
-- [ ] Implement risk score calculation
-- [ ] Add risk level indicators to project views
-- [ ] Create risk alerts
+- [x] Create delay causes configuration (admin)
+- [x] Build delay reporting interface
+- [x] Link delays to tasks and projects
+- [x] Implement risk score calculation
+- [x] Add risk level indicators to project views
+- [x] Create risk alerts
 
-### Phase 7 — Reports
-> **Status:** PLANNED
+### Phase 7 — Reports ✅
+> **Status:** COMPLETE
 
-- [ ] Auto-generate daily engineering reports
-- [ ] Build daily report viewer
-- [ ] Implement weekly report aggregation
-- [ ] Excel export for all report types
-- [ ] Report filtering by date, team member, project
+- [x] Auto-generate daily engineering reports
+- [x] Build daily report viewer
+- [x] Implement weekly report aggregation
+- [x] Excel export for all report types
+- [x] Report filtering by date, team member, project
 
-### Phase 8 — Engineering Dashboard
-> **Status:** PLANNED
+### Phase 8 — Engineering Dashboard ✅
+> **Status:** COMPLETE
 
-- [ ] Build Obeya-style dashboard layout
-- [ ] Implement KPI cards with real-time data
-- [ ] Project health overview
-- [ ] Daily team activity feed
-- [ ] Team workload visualization
-- [ ] Alert panel
-- [ ] Risk insights section
+- [x] Build Obeya-style dashboard layout
+- [x] Implement KPI cards with real-time data
+- [x] Project health overview
+- [x] Daily team activity feed
+- [x] Team workload visualization
+- [x] Alert panel
+- [x] Risk insights section
 
-### Phase 9 — Engineering Analytics
-> **Status:** PLANNED
+### Phase 9 — Engineering Analytics ✅
+> **Status:** COMPLETE
 
-- [ ] Historical performance metrics
-- [ ] Trend analysis (overtime, delays, velocity)
-- [ ] Team utilization analytics
-- [ ] Project completion forecasting
-- [ ] Export analytics to Excel
+- [x] Historical performance metrics
+- [x] Trend analysis (overtime, delays, velocity)
+- [x] Team utilization analytics
+- [x] Project completion forecasting
+- [x] Export analytics to Excel
+
+### Phase 10 — Project Gantt ✅
+> **Status:** COMPLETE
+
+- [x] Create `taskDependencies` + `taskTypeCategories` collection schemas
+- [x] Extend `tasks` schema with Gantt fields (`plannedStartDate`, `plannedEndDate`, `percentComplete`, `showInGantt`, `milestone`, `summaryTask`, `parentTaskId`)
+- [x] Create `ganttService.js` (read tasks, dependencies, update Gantt fields)
+- [x] Build `GanttGrid` with dual-panel layout (task list + scrollable timeline)
+- [x] Build `GanttBar` (regular, milestone ◆, summary task)
+- [x] Build `DependencyArrows` SVG overlay (FS / SS links)
+- [x] Build `GanttTaskEditDrawer` (quick edit: dates, % avance, showInGantt)
+- [x] Build `ProjectGantt` page with Weekly / Monthly toggle + filters
+- [x] Add route `/gantt` and sidebar nav item "Project Gantt"
 
 ---
 

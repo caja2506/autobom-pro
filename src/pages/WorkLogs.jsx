@@ -106,19 +106,19 @@ export default function WorkLogs() {
             />
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/70 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 shadow-lg">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-2xl flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-green-600" />
+                    <div className="w-10 h-10 bg-emerald-600/20 border border-emerald-500/30 rounded-xl flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-emerald-400" />
                     </div>
                     <div>
-                        <h2 className="font-black text-xl text-slate-800 tracking-tight">Registro de Horas</h2>
+                        <h2 className="font-black text-xl text-white tracking-tight">Registro de Horas</h2>
                         <p className="text-[10px] text-slate-400 font-bold">{weekStats.logCount} registro{weekStats.logCount !== 1 ? 's' : ''} esta semana</p>
                     </div>
                 </div>
 
                 {deleteError && (
-                    <div className="bg-red-50 text-red-600 text-xs font-bold px-3 py-1.5 rounded-lg ml-auto mr-4 border border-red-100 flex items-center">
+                    <div className="bg-red-500/15 text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg ml-auto mr-4 border border-red-500/30 flex items-center">
                         <AlertTriangle className="w-3 h-3 mr-1" />
                         {deleteError}
                     </div>
@@ -127,7 +127,7 @@ export default function WorkLogs() {
                 {canEdit && (
                     <button
                         onClick={() => setShowManual(true)}
-                        className="bg-green-600 text-white px-5 py-3 rounded-2xl font-black shadow-lg flex items-center justify-center active:scale-95 transition-transform text-sm"
+                        className="bg-emerald-600 text-white px-5 py-3 rounded-xl font-black shadow-lg shadow-emerald-500/20 flex items-center justify-center active:scale-95 transition-transform text-sm border border-emerald-500"
                     >
                         <Plus className="mr-2 w-4 h-4" /> Registro Manual
                     </button>
@@ -147,13 +147,13 @@ export default function WorkLogs() {
 
                     {/* Week Stats Cards */}
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                        <div className="bg-slate-900/70 rounded-xl border border-slate-800 p-4 shadow-lg">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Horas Totales</span>
-                            <p className="text-3xl font-black text-indigo-600 mt-1 tabular-nums">
+                            <p className="text-3xl font-black text-indigo-400 mt-1 tabular-nums">
                                 {formatDuration(weekStats.totalHours)}
                             </p>
                         </div>
-                        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                        <div className="bg-slate-900/70 rounded-xl border border-slate-800 p-4 shadow-lg">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
                                 <Zap className="w-3 h-3 text-amber-500" /> Extras
                             </span>
@@ -166,7 +166,7 @@ export default function WorkLogs() {
 
                     {/* Per-project breakdown */}
                     {Object.keys(weekStats.byProject).length > 0 && (
-                        <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
+                        <div className="bg-slate-900/70 rounded-xl border border-slate-800 p-4 shadow-lg">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block flex items-center gap-1">
                                 <BarChart3 className="w-3 h-3" /> Por Proyecto
                             </span>
@@ -175,10 +175,10 @@ export default function WorkLogs() {
                                     .sort(([, a], [, b]) => b - a)
                                     .map(([pId, hours]) => (
                                         <div key={pId} className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-slate-600 truncate max-w-[140px]">
+                                            <span className="text-xs font-bold text-slate-300 truncate max-w-[140px]">
                                                 {pId === 'sin_proyecto' ? 'Sin proyecto' : getProjectName(pId) || pId.slice(0, 8)}
                                             </span>
-                                            <span className="text-xs font-black text-indigo-600 tabular-nums">{formatDuration(hours)}</span>
+                                            <span className="text-xs font-black text-indigo-400 tabular-nums">{formatDuration(hours)}</span>
                                         </div>
                                     ))}
                             </div>
@@ -189,47 +189,47 @@ export default function WorkLogs() {
                 {/* RIGHT: Log History */}
                 <div className="lg:col-span-2 space-y-4">
                     {/* Week Navigator */}
-                    <div className="flex items-center justify-between bg-white rounded-2xl border border-slate-100 p-3 shadow-sm">
+                    <div className="flex items-center justify-between bg-slate-900/70 rounded-xl border border-slate-800 p-3 shadow-lg">
                         <button
                             onClick={() => setWeekOffset(w => w - 1)}
-                            className="p-2 hover:bg-slate-100 rounded-xl transition-all"
+                            className="p-2 hover:bg-slate-800 rounded-lg transition-all text-slate-400"
                         >
                             <ChevronLeft className="w-5 h-5" />
                         </button>
                         <div className="text-center">
-                            <span className="text-xs font-black text-slate-700">
+                            <span className="text-xs font-black text-slate-200">
                                 {weekStart.toLocaleDateString('es', { day: '2-digit', month: 'short' })}
                                 {' — '}
                                 {weekEnd.toLocaleDateString('es', { day: '2-digit', month: 'short', year: 'numeric' })}
                             </span>
                             {weekOffset === 0 && (
-                                <span className="ml-2 text-[9px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                                <span className="ml-2 text-[9px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-full border border-emerald-500/30">
                                     Esta semana
                                 </span>
                             )}
                         </div>
                         <button
                             onClick={() => setWeekOffset(w => w + 1)}
-                            className="p-2 hover:bg-slate-100 rounded-xl transition-all"
+                            className="p-2 hover:bg-slate-800 rounded-lg transition-all text-slate-400"
                             disabled={weekOffset >= 0}
                         >
-                            <ChevronRight className={`w-5 h-5 ${weekOffset >= 0 ? 'text-slate-200' : ''}`} />
+                            <ChevronRight className={`w-5 h-5 ${weekOffset >= 0 ? 'text-slate-700' : ''}`} />
                         </button>
                     </div>
 
                     {/* Logs List */}
                     {myWeekLogs.length === 0 ? (
-                        <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center">
-                            <Clock className="w-12 h-12 text-slate-200 mx-auto mb-3" />
+                        <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-12 text-center">
+                            <Clock className="w-12 h-12 text-slate-700 mx-auto mb-3" />
                             <h3 className="text-sm font-bold text-slate-400 mb-1">Sin registros esta semana</h3>
-                            <p className="text-xs text-slate-300">Inicia el timer o crea un registro manual</p>
+                            <p className="text-xs text-slate-500">Inicia el timer o crea un registro manual</p>
                         </div>
                     ) : (
                         <div className="space-y-2">
                             {myWeekLogs.map(log => (
                                 <div
                                     key={log.id}
-                                    className={`bg-white rounded-2xl border-2 p-4 transition-all hover:shadow-md group ${log.overtime ? 'border-amber-100' : 'border-slate-100'
+                                    className={`bg-slate-900/60 rounded-xl border p-4 transition-all hover:shadow-lg group ${log.overtime ? 'border-amber-500/30' : 'border-slate-800'
                                         }`}
                                 >
                                     <div className="flex items-start justify-between gap-3">
@@ -284,7 +284,7 @@ export default function WorkLogs() {
                                                         setDeletingId(log.id);
                                                         setDeleteError('');
                                                         try {
-                                                            await deleteTimeLog(log.id, log.taskId);
+                                                            await deleteTimeLog(log.id, log.taskId, log.projectId);
                                                         } catch (err) {
                                                             console.error("Delete Error:", err);
                                                             setDeleteError(err.message || "Error eliminando el registro");

@@ -66,18 +66,18 @@ export default function ProjectModal({ isOpen, onClose, project, teamMembers, us
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg animate-in zoom-in-95 duration-200">
+            <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 w-full max-w-lg animate-in zoom-in-95 duration-200">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                <div className="flex items-center justify-between p-6 border-b border-slate-800">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-100 rounded-2xl flex items-center justify-center">
-                            <FolderGit2 className="w-5 h-5 text-indigo-600" />
+                        <div className="w-10 h-10 bg-indigo-600/20 rounded-2xl flex items-center justify-center">
+                            <FolderGit2 className="w-5 h-5 text-indigo-400" />
                         </div>
                         <h2 className="font-black text-xl tracking-tight">
                             {isNew ? 'Nuevo Proyecto' : 'Editar Proyecto'}
                         </h2>
                     </div>
-                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl">
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-800 rounded-xl">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -90,7 +90,7 @@ export default function ProjectModal({ isOpen, onClose, project, teamMembers, us
                             value={form.name}
                             onChange={e => setForm({ ...form, name: e.target.value })}
                             placeholder="Ej: Celda Robotizada XYZ"
-                            className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                            className="w-full px-4 py-3 border border-slate-700 rounded-2xl text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                         />
                     </div>
 
@@ -101,7 +101,7 @@ export default function ProjectModal({ isOpen, onClose, project, teamMembers, us
                             value={form.description}
                             onChange={e => setForm({ ...form, description: e.target.value })}
                             placeholder="Alcance, objetivos, notas..."
-                            className="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                            className="w-full px-4 py-3 border border-slate-700 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                             rows={3}
                         />
                     </div>
@@ -113,7 +113,7 @@ export default function ProjectModal({ isOpen, onClose, project, teamMembers, us
                             <select
                                 value={form.status}
                                 onChange={e => setForm({ ...form, status: e.target.value })}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                             >
                                 {Object.entries(PROJECT_STATUS_CONFIG).map(([key, cfg]) => (
                                     <option key={key} value={key}>{cfg.icon} {cfg.label}</option>
@@ -125,7 +125,7 @@ export default function ProjectModal({ isOpen, onClose, project, teamMembers, us
                             <select
                                 value={form.priority}
                                 onChange={e => setForm({ ...form, priority: e.target.value })}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                             >
                                 {Object.entries(TASK_PRIORITY_CONFIG).map(([key, cfg]) => (
                                     <option key={key} value={key}>{cfg.icon} {cfg.label}</option>
@@ -142,7 +142,7 @@ export default function ProjectModal({ isOpen, onClose, project, teamMembers, us
                         <select
                             value={form.ownerId}
                             onChange={e => setForm({ ...form, ownerId: e.target.value })}
-                            className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                            className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                         >
                             <option value="">Sin asignar</option>
                             {teamMembers.map(u => (
@@ -161,7 +161,7 @@ export default function ProjectModal({ isOpen, onClose, project, teamMembers, us
                                 type="date"
                                 value={form.startDate}
                                 onChange={e => setForm({ ...form, startDate: e.target.value })}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                             />
                         </div>
                         <div>
@@ -172,17 +172,17 @@ export default function ProjectModal({ isOpen, onClose, project, teamMembers, us
                                 type="date"
                                 value={form.targetEndDate}
                                 onChange={e => setForm({ ...form, targetEndDate: e.target.value })}
-                                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                             />
                         </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 border-t border-slate-100 flex gap-3">
+                <div className="p-6 border-t border-slate-800 flex gap-3">
                     <button
                         onClick={onClose}
-                        className="flex-1 px-4 py-3 border border-slate-200 rounded-2xl font-bold text-slate-500 hover:bg-slate-50 transition-all"
+                        className="flex-1 px-4 py-3 border border-slate-700 rounded-2xl font-bold text-slate-500 hover:bg-slate-800 transition-all"
                     >
                         Cancelar
                     </button>

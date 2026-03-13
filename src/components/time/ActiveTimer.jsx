@@ -102,8 +102,8 @@ export default function ActiveTimer({
             {/* Active Timer Display */}
             {activeTimer ? (
                 <div className={`rounded-3xl border-2 p-5 shadow-lg transition-all ${elapsedHours >= 8
-                        ? 'bg-red-50 border-red-200 animate-pulse'
-                        : 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200'
+                        ? 'bg-red-500/15 border-red-500/30 animate-pulse'
+                        : 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-500/30'
                     }`}>
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -112,7 +112,7 @@ export default function ActiveTimer({
                                 Timer activo
                             </span>
                             {activeTimer.overtime && (
-                                <span className="text-[9px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                <span className="text-[9px] font-bold text-amber-400 bg-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
                                     <Zap className="w-3 h-3" /> EXTRA
                                 </span>
                             )}
@@ -121,7 +121,7 @@ export default function ActiveTimer({
 
                     {/* Elapsed Time - Big Display */}
                     <div className="text-center py-4">
-                        <span className={`text-5xl font-black tracking-tight tabular-nums ${elapsedHours >= 8 ? 'text-red-600' : 'text-indigo-700'
+                        <span className={`text-5xl font-black tracking-tight tabular-nums ${elapsedHours >= 8 ? 'text-red-400' : 'text-indigo-400'
                             }`}>
                             {elapsed}
                         </span>
@@ -130,7 +130,7 @@ export default function ActiveTimer({
                     {/* What's being tracked */}
                     <div className="flex flex-wrap gap-2 justify-center mb-4">
                         {activeTaskName && (
-                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-3 py-1 rounded-full flex items-center gap-1">
+                            <span className="text-[10px] font-bold text-indigo-400 bg-indigo-600/20 px-3 py-1 rounded-full flex items-center gap-1">
                                 <ListTodo className="w-3 h-3" /> {activeTaskName}
                             </span>
                         )}
@@ -162,7 +162,7 @@ export default function ActiveTimer({
                             <Play className="w-5 h-5 fill-current" /> Iniciar Timer
                         </button>
                     ) : (
-                        <div className="bg-white rounded-3xl border-2 border-indigo-100 p-5 shadow-lg space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="bg-slate-900/70 rounded-2xl border-2 border-indigo-100 p-5 shadow-lg space-y-3 animate-in fade-in zoom-in-95 duration-200">
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-black text-slate-700 flex items-center gap-2">
                                     <TimerIcon className="w-4 h-4 text-indigo-500" /> Nuevo Timer
@@ -184,7 +184,7 @@ export default function ActiveTimer({
                                         const t = tasks.find(t => t.id === e.target.value);
                                         if (t?.projectId) setFormProject(t.projectId);
                                     }}
-                                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                    className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                                 >
                                     <option value="">Sin tarea específica</option>
                                     {tasks
@@ -203,7 +203,7 @@ export default function ActiveTimer({
                                 <select
                                     value={formProject}
                                     onChange={e => setFormProject(e.target.value)}
-                                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                    className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                                 >
                                     <option value="">Sin proyecto</option>
                                     {projects.map(p => (
@@ -221,12 +221,12 @@ export default function ActiveTimer({
                                     value={formNotes}
                                     onChange={e => setFormNotes(e.target.value)}
                                     placeholder="¿En qué estás trabajando?"
-                                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                    className="w-full px-3 py-2.5 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                                 />
                             </div>
 
                             {/* Overtime toggle */}
-                            <label className="flex items-center gap-3 px-3 py-2 bg-amber-50 rounded-xl cursor-pointer">
+                            <label className="flex items-center gap-3 px-3 py-2 bg-amber-500/15 rounded-xl cursor-pointer">
                                 <input
                                     type="checkbox"
                                     checked={formOvertime}
@@ -235,7 +235,7 @@ export default function ActiveTimer({
                                 />
                                 <div className="flex items-center gap-1.5">
                                     <Zap className="w-4 h-4 text-amber-500" />
-                                    <span className="text-xs font-bold text-amber-700">Marcar como tiempo extra</span>
+                                    <span className="text-xs font-bold text-amber-400">Marcar como tiempo extra</span>
                                 </div>
                             </label>
 

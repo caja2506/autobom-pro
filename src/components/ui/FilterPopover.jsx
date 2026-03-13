@@ -12,7 +12,7 @@ const FilterPopover = ({ filters, setFilters, options }) => {
 
     return (
         <>
-            <button onClick={() => setIsOpen(true)} className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${activeFilterCount > 0 ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}>
+            <button onClick={() => setIsOpen(true)} className={`px-4 py-3 rounded-xl border flex items-center gap-2 transition-all ${activeFilterCount > 0 ? 'bg-indigo-600/20 border-indigo-300 text-indigo-400' : 'bg-slate-900 border-slate-700 text-slate-500 hover:bg-slate-700'}`}>
                 <Filter className="w-4 h-4" />
                 <span className="font-bold text-sm hidden sm:inline">Filtros</span>
                 {activeFilterCount > 0 && <span className="bg-indigo-600 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">{activeFilterCount}</span>}
@@ -20,12 +20,12 @@ const FilterPopover = ({ filters, setFilters, options }) => {
 
             {isOpen && (
                 <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4" onClick={() => setIsOpen(false)}>
-                    <div className="bg-white rounded-3xl shadow-2xl border border-slate-100 w-full max-w-sm p-6 space-y-4 animate-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                    <div className="bg-slate-900 rounded-2xl shadow-2xl border border-slate-800 border border-slate-800 w-full max-w-sm p-6 space-y-4 animate-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center">
                             <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                                <Filter className="w-4 h-4 text-indigo-600" /> Filtrar por
+                                <Filter className="w-4 h-4 text-indigo-400" /> Filtrar por
                             </h4>
-                            <button onClick={() => setIsOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-colors">
+                            <button onClick={() => setIsOpen(false)} className="p-2 text-slate-400 hover:bg-slate-800 rounded-full transition-colors">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
@@ -43,7 +43,7 @@ const FilterPopover = ({ filters, setFilters, options }) => {
                         </div>
                         <div className="flex gap-3 pt-2">
                             {activeFilterCount > 0 && (
-                                <button onClick={() => setFilters({ ...filters, brand: [], category: [], provider: [] })} className="flex-1 text-sm font-bold text-red-500 hover:bg-red-50 p-3 rounded-xl border border-red-100 transition-colors">
+                                <button onClick={() => setFilters({ ...filters, brand: [], category: [], provider: [] })} className="flex-1 text-sm font-bold text-red-500 hover:bg-red-500/15 p-3 rounded-xl border border-red-100 transition-colors">
                                     Limpiar
                                 </button>
                             )}

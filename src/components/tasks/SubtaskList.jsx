@@ -34,7 +34,7 @@ export default function SubtaskList({ subtasks = [], taskId, readOnly = false })
                     Subtareas {total > 0 && `(${completed}/${total})`}
                 </h4>
                 {total > 0 && (
-                    <span className={`text-xs font-bold ${pct === 100 ? 'text-green-600' : 'text-indigo-600'}`}>
+                    <span className={`text-xs font-bold ${pct === 100 ? 'text-green-400' : 'text-indigo-400'}`}>
                         {pct}%
                     </span>
                 )}
@@ -42,7 +42,7 @@ export default function SubtaskList({ subtasks = [], taskId, readOnly = false })
 
             {/* Progress bar */}
             {total > 0 && (
-                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                     <div
                         className={`h-full rounded-full transition-all duration-500 ${pct === 100 ? 'bg-green-500' : 'bg-indigo-500'}`}
                         style={{ width: `${pct}%` }}
@@ -55,7 +55,7 @@ export default function SubtaskList({ subtasks = [], taskId, readOnly = false })
                 {subtasks.map((st) => (
                     <div
                         key={st.id}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl group transition-all ${st.completed ? 'bg-green-50/50' : 'hover:bg-slate-50'
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl group transition-all ${st.completed ? 'bg-green-50/50' : 'hover:bg-slate-700'
                             }`}
                     >
                         <button
@@ -95,7 +95,7 @@ export default function SubtaskList({ subtasks = [], taskId, readOnly = false })
                                 value={newTitle}
                                 onChange={(e) => setNewTitle(e.target.value)}
                                 placeholder="Describe la subtarea..."
-                                className="flex-1 px-3 py-2 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50"
+                                className="flex-1 px-3 py-2 border border-slate-700 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
                                 autoFocus
                             />
                             <button type="submit" className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 active:scale-90 transition-all">
@@ -112,7 +112,7 @@ export default function SubtaskList({ subtasks = [], taskId, readOnly = false })
                     ) : (
                         <button
                             onClick={() => setIsAdding(true)}
-                            className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-indigo-600 py-2.5 border-2 border-dashed border-slate-200 hover:border-indigo-300 rounded-xl transition-all"
+                            className="w-full flex items-center justify-center gap-2 text-xs font-bold text-slate-400 hover:text-indigo-400 py-2.5 border-2 border-dashed border-slate-700 hover:border-indigo-300 rounded-xl transition-all"
                         >
                             <Plus className="w-3.5 h-3.5" /> Agregar subtarea
                         </button>
