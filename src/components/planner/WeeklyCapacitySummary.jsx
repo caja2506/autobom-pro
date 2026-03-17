@@ -3,6 +3,10 @@ import { Clock, Zap, AlertTriangle, Users } from 'lucide-react';
 
 /**
  * Shows aggregated planned hours per person and per day for the visible week.
+ *
+ * Data source: enriched plan items via enrichPlanItemsWithTasks().
+ * Uses `item.assigneeDisplayName` (live data with snapshot fallback)
+ * instead of directly reading `item.assignedToName`.
  */
 export default function WeeklyCapacitySummary({ planItems, teamMembers, weekDays }) {
     const DAILY_CAPACITY = 8; // hours
@@ -18,8 +22,9 @@ export default function WeeklyCapacitySummary({ planItems, teamMembers, weekDays
 
         if (!perPerson[uid]) {
             const member = teamMembers.find(m => m.uid === uid);
+            // Prefer enriched name, then teamMember lookup, then UID prefix
             perPerson[uid] = {
-                name: item.assignedToName || member?.displayName || uid.slice(0, 6),
+                name: item.assigneeDisplayName || member?.displayName || item.assignedToName || uid.slice(0, 6),
                 total: 0,
                 days: {},
             };

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Square, Clock, Zap, ListTodo, FolderGit2, Play } from 'lucide-react';
-import { formatElapsed, getActiveTimer, stopTimer, startTimer } from '../../services/timeService';
+import { Square, Clock, Zap, ListTodo, FolderGit2, Play, AlertTriangle, Info } from 'lucide-react';
+import { formatElapsed, getActiveTimer, stopTimer, startTimer, forceStopTimer, validateActiveTimer } from '../../services/timeService';
 
-export default function ActiveTimerCard({ tasks, projects, userId, onTimerStop }) {
+export default function ActiveTimerCard({ tasks, allTasks, projects, userId, onTimerStop }) {
     const [activeTimer, setActiveTimer] = useState(() => getActiveTimer());
     const [elapsed, setElapsed] = useState('0:00:00');
     const [isStopping, setIsStopping] = useState(false);
@@ -10,6 +10,7 @@ export default function ActiveTimerCard({ tasks, projects, userId, onTimerStop }
     const [formTask, setFormTask] = useState('');
     const [formProject, setFormProject] = useState('');
     const [isStarting, setIsStarting] = useState(false);
+    const [autoStopMsg, setAutoStopMsg] = useState(null);
     const intervalRef = useRef(null);
 
     const elapsedHours = parseInt(elapsed.split(':')[0] || '0');
@@ -26,6 +27,24 @@ export default function ActiveTimerCard({ tasks, projects, userId, onTimerStop }
         }
     }, [activeTimer]);
 
+    // Validate timer on mount (detect orphans + auto-stop stale timers)
+    useEffect(() => {
+        validateActiveTimer().then(result => {
+            if (result.orphaned) {
+                setActiveTimer(null);
+                setAutoStopMsg('Timer huérfano detectado y limpiado (el registro en Firestore ya no existe).');
+                setTimeout(() => setAutoStopMsg(null), 6000);
+            } else if (result.autoStopped) {
+                setActiveTimer(null);
+                setAutoStopMsg(`Timer detenido automáticamente tras ${Math.floor(result.hours)}h sin actividad.`);
+                setTimeout(() => setAutoStopMsg(null), 6000);
+            } else {
+                // Re-sync in case validation changed something
+                setActiveTimer(getActiveTimer());
+            }
+        }).catch(err => console.warn('Timer validation error:', err));
+    }, []);
+
     // Sync from localStorage (cross-tab)
     useEffect(() => {
         const check = () => setActiveTimer(getActiveTimer());
@@ -33,24 +52,40 @@ export default function ActiveTimerCard({ tasks, projects, userId, onTimerStop }
         return () => window.removeEventListener('storage', check);
     }, []);
 
+    const [stopError, setStopError] = useState(false);
+
     const handleStop = useCallback(async () => {
         if (!activeTimer) return;
         setIsStopping(true);
+        setStopError(false);
         try {
             const result = await stopTimer(activeTimer.logId, { notes: '', overtime: false });
             setActiveTimer(null);
             clearInterval(intervalRef.current);
             setElapsed('0:00:00');
             onTimerStop?.(result);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            setStopError(true);
+        }
         setIsStopping(false);
     }, [activeTimer, onTimerStop]);
+
+    const handleForceStop = useCallback(() => {
+        forceStopTimer();
+        setActiveTimer(null);
+        clearInterval(intervalRef.current);
+        setElapsed('0:00:00');
+        setStopError(false);
+        onTimerStop?.(null);
+    }, [onTimerStop]);
 
     const handleStart = useCallback(async () => {
         if (!formTask && !formProject) return;
         setIsStarting(true);
         try {
             const task = tasks.find(t => t.id === formTask);
+            const project = projects?.find(p => p.id === (formProject || task?.projectId));
             const timer = await startTimer({
                 taskId: formTask || null,
                 projectId: formProject || task?.projectId || null,
@@ -58,18 +93,24 @@ export default function ActiveTimerCard({ tasks, projects, userId, onTimerStop }
                 notes: '',
                 overtime: false,
             });
+            // Store display names for when task lookup fails
+            timer.taskTitle = task?.title || '';
+            timer.projectName = project?.name || '';
             setActiveTimer(timer);
+            // Persist updated timer with names
+            import('../../services/timeService').then(m => m.setActiveTimer(timer));
             setShowStartForm(false);
             setFormTask(''); setFormProject('');
         } catch (e) { console.error(e); }
         setIsStarting(false);
     }, [formTask, formProject, tasks, userId]);
 
+    const lookupTasks = allTasks || tasks;
     const activeTaskName = activeTimer?.taskId
-        ? (tasks?.find(t => t.id === activeTimer.taskId)?.title || 'Tarea')
+        ? (lookupTasks?.find(t => t.id === activeTimer.taskId)?.title || activeTimer?.taskTitle || 'Tarea desconocida')
         : null;
     const activeProjectName = activeTimer?.projectId
-        ? (projects?.find(p => p.id === activeTimer.projectId)?.name || 'Proyecto')
+        ? (projects?.find(p => p.id === activeTimer.projectId)?.name || activeTimer?.projectName || 'Proyecto')
         : null;
 
     return (
@@ -85,14 +126,21 @@ export default function ActiveTimerCard({ tasks, projects, userId, onTimerStop }
                 )}
             </div>
 
+            {/* Auto-stop notification */}
+            {autoStopMsg && (
+                <div className="mx-5 mb-2 flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <Info className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="text-[10px] font-bold text-amber-300">{autoStopMsg}</span>
+                </div>
+            )}
+
             <div className="p-5">
                 {activeTimer ? (
                     <div className={`space-y-4 ${elapsedHours >= 8 ? 'animate-pulse' : ''}`}>
                         {/* Big timer display */}
                         <div className="text-center">
-                            <span className={`text-4xl font-black tabular-nums tracking-tight ${
-                                elapsedHours >= 8 ? 'text-red-400' : 'text-indigo-400'
-                            }`}>
+                            <span className={`text-4xl font-black tabular-nums tracking-tight ${elapsedHours >= 8 ? 'text-red-400' : 'text-indigo-400'
+                                }`}>
                                 {elapsed}
                             </span>
                             {activeTimer.overtime && (
@@ -128,6 +176,22 @@ export default function ActiveTimerCard({ tasks, projects, userId, onTimerStop }
                             <Square className="w-4 h-4 fill-current" />
                             {isStopping ? 'Deteniendo...' : 'Detener Timer'}
                         </button>
+
+                        {/* Force stop fallback */}
+                        {stopError && (
+                            <div className="space-y-2 pt-1">
+                                <div className="flex items-center gap-1.5 text-amber-400">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    <span className="text-[10px] font-bold">Error al detener. ¿Forzar detención?</span>
+                                </div>
+                                <button
+                                    onClick={handleForceStop}
+                                    className="w-full py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all"
+                                >
+                                    Forzar Detención
+                                </button>
+                            </div>
+                        )}
                     </div>
                 ) : !showStartForm ? (
                     <div className="text-center py-4 space-y-3">

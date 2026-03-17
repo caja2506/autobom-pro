@@ -42,10 +42,28 @@ export const COLLECTIONS = {
     NOTIFICATIONS: 'notifications',
     TASK_TYPES: 'taskTypes',
     SETTINGS: 'settings',
-    AUDIT_LOGS: 'auditLogs',
+    // AUDIT_LOGS: deprecated — use AUDIT_EVENTS instead
     WEEKLY_PLAN_ITEMS: 'weeklyPlanItems',
     TASK_DEPENDENCIES: 'taskDependencies',
     TASK_TYPE_CATEGORIES: 'taskTypeCategories',
+
+    // --- Management Intelligence Collections (Phase 2+) ---
+    AUDIT_FINDINGS: 'auditFindings',
+    AUDIT_EVENTS: 'auditEvents',
+    ANALYTICS_SNAPSHOTS: 'analyticsSnapshots',
+    AI_INSIGHTS: 'aiInsights',
+    MANAGEMENT_BRIEFS: 'managementBriefs',
+
+    // --- Automation Operations & Accountability Foundation ---
+    AUTOMATION_ROUTINES: 'automationRoutines',
+    AUTOMATION_RUNS: 'automationRuns',
+    AUTOMATION_METRICS_DAILY: 'automationMetricsDaily',
+    OPERATION_INCIDENTS: 'operationIncidents',
+    TELEGRAM_SESSIONS: 'telegramSessions',
+    TELEGRAM_REPORTS: 'telegramReports',
+    TELEGRAM_ESCALATIONS: 'telegramEscalations',
+    TELEGRAM_BOT_LOGS: 'telegramBotLogs',
+    TELEGRAM_DELIVERIES: 'telegramDeliveries',
 };
 
 
@@ -92,43 +110,43 @@ export const TASK_STATUS = {
 export const TASK_STATUS_CONFIG = {
     [TASK_STATUS.BACKLOG]: {
         label: 'Backlog',
-        color: 'slate',
+        color: '#64748b',
         icon: 'Inbox',
         order: 0,
     },
     [TASK_STATUS.PENDING]: {
         label: 'Pendiente',
-        color: 'red',
+        color: '#ef4444',
         icon: 'Clock',
         order: 1,
     },
     [TASK_STATUS.IN_PROGRESS]: {
         label: 'En Progreso',
-        color: 'amber',
+        color: '#f59e0b',
         icon: 'Play',
         order: 2,
     },
     [TASK_STATUS.VALIDATION]: {
         label: 'Validación',
-        color: 'purple',
+        color: '#8b5cf6',
         icon: 'CheckCircle',
         order: 3,
     },
     [TASK_STATUS.COMPLETED]: {
         label: 'Completado',
-        color: 'green',
+        color: '#22c55e',
         icon: 'CheckCheck',
         order: 4,
     },
     [TASK_STATUS.BLOCKED]: {
         label: 'Bloqueado',
-        color: 'red',
+        color: '#ef4444',
         icon: 'Ban',
         order: 5,
     },
     [TASK_STATUS.CANCELLED]: {
         label: 'Cancelado',
-        color: 'gray',
+        color: '#6b7280',
         icon: 'XCircle',
         order: 6,
     },
@@ -253,6 +271,65 @@ export const NOTIFICATION_TYPE = {
     SYSTEM: 'system',
 };
 
+/**
+ * Audit finding severity levels
+ */
+export const AUDIT_FINDING_SEVERITY = {
+    INFO: 'info',
+    WARNING: 'warning',
+    CRITICAL: 'critical',
+};
+
+export const AUDIT_FINDING_SEVERITY_CONFIG = {
+    [AUDIT_FINDING_SEVERITY.INFO]: {
+        label: 'Información',
+        color: 'blue',
+        icon: 'Info',
+        order: 0,
+    },
+    [AUDIT_FINDING_SEVERITY.WARNING]: {
+        label: 'Advertencia',
+        color: 'amber',
+        icon: 'AlertTriangle',
+        order: 1,
+    },
+    [AUDIT_FINDING_SEVERITY.CRITICAL]: {
+        label: 'Crítico',
+        color: 'red',
+        icon: 'AlertOctagon',
+        order: 2,
+    },
+};
+
+/**
+ * Audit finding statuses
+ */
+export const AUDIT_FINDING_STATUS = {
+    OPEN: 'open',
+    RESOLVED: 'resolved',
+    DISMISSED: 'dismissed',
+};
+
+/**
+ * Analytics snapshot scopes
+ */
+export const ANALYTICS_SCOPE = {
+    DEPARTMENT: 'department',
+    PROJECT: 'project',
+    USER: 'user',
+};
+
+/**
+ * AI Insight types
+ */
+export const AI_INSIGHT_TYPE = {
+    TEAM_OVERLOAD: 'team_overload_report',
+    ESTIMATION_DRIFT: 'estimation_drift',
+    BOTTLENECK_ANALYSIS: 'bottleneck_analysis',
+    RISK_ASSESSMENT: 'risk_assessment',
+    WEEKLY_SUMMARY: 'weekly_summary',
+};
+
 
 // ============================================================
 // DOCUMENT FACTORY FUNCTIONS
@@ -274,6 +351,14 @@ export function createUserDocument({
     department = 'Engineering',
     weeklyCapacityHours = 40,       // Standard weekly hours
     active = true,
+    // --- Automation Operations hierarchy fields ---
+    operationalRole = null,         // 'manager' | 'team_lead' | 'engineer' | 'technician'
+    providerLinks = {},             // { telegram: { chatId, username, linkedAt } }
+    reportsTo = null,               // UID of direct supervisor
+    isAutomationParticipant = false, // Enrolled in automation flows
+    escalationTargetUserId = null,  // UID of escalation target (override chain)
+    activeShift = null,             // e.g. 'morning' | 'afternoon' | null
+    workSchedule = null,            // e.g. { start: '08:00', end: '17:00' }
 } = {}) {
     return {
         name,
@@ -284,6 +369,14 @@ export function createUserDocument({
         department,
         weeklyCapacityHours,
         active,
+        // Automation hierarchy
+        operationalRole,
+        providerLinks,
+        reportsTo,
+        isAutomationParticipant,
+        escalationTargetUserId,
+        activeShift,
+        workSchedule,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     };
@@ -339,7 +432,27 @@ export function createProjectDocument({
 }
 
 /**
- * Tasks Collection
+ * Tasks Collection — OFFICIAL FIELD CONTRACT
+ * ===========================================
+ *
+ * IMPORTANT: All code reading/writing task documents MUST use these field names.
+ * Legacy documents may use deprecated aliases — use taskNormalizer.js at read-time.
+ *
+ * OFFICIAL FIELDS:
+ *   status:         'backlog' | 'pending' | 'in_progress' | 'blocked' | 'validation' | 'completed' | 'cancelled'
+ *   completedDate:  ISO string | null    ← NOT "completedAt" (deprecated alias)
+ *   blockedReason:  string               ← NOT "blockReason" (deprecated typo)
+ *   reopenedAt:     ISO string | null     (set by CF on reopen)
+ *   reopenedBy:     string (uid) | null   (set by CF on reopen)
+ *   updatedAt:      ISO string            (set by CF on transitions, serverTimestamp on edits)
+ *   updatedBy:      string (uid) | null   (set by CF on transitions)
+ *
+ * STATUS ALIASES (DB value → Display):
+ *   'pending'    → "Planificado"   (WORKFLOW_STATUS.PLANNED)
+ *   'validation' → "En Revisión"   (WORKFLOW_STATUS.REVIEW)
+ *
+ * See: src/utils/taskNormalizer.js for legacy document normalization.
+ * See: src/core/workflow/workflowModel.js for the official state machine.
  *
  * Document ID: auto-generated
  */
@@ -671,45 +784,81 @@ export function createAuditLogDocument({
  * WeeklyPlanItems Collection
  * Represents a single block of time planned for a task in the Weekly Planner.
  *
+ * Architecture: tasks = master record, weeklyPlanItems = scheduling record.
+ * The frontend should enrich plan items with live task data via
+ * enrichPlanItemsWithTasks() from utils/plannerUtils.js.
+ *
+ * ── REQUIRED FIELDS (scheduling) ──
+ *   taskId, weekStartDate, date, dayOfWeek, startDateTime, endDateTime,
+ *   plannedHours, createdBy
+ *
+ * ── OPTIONAL FIELDS ──
+ *   assignedTo, projectId — kept for query performance / filtering
+ *   notes
+ *
+ * ── DEPRECATED FIELDS (legacy snapshots) ──
+ *   taskTitleSnapshot, projectNameSnapshot, statusSnapshot,
+ *   assignedToName, priority (snapshot), colorKey
+ *   → These are still written transitionally for backward compatibility
+ *     but should NOT be used as source of truth. Use enriched data instead.
+ *   → TODO migration: remove these fields after full migration.
+ *
  * Document ID: auto-generated
  */
 export function createWeeklyPlanItemDocument({
-    taskId = null,                  // Reference to tasks document
-    taskTitleSnapshot = '',         // Denormalized for display
-    projectId = null,               // Reference to projects document
-    projectNameSnapshot = '',       // Denormalized for display
-    assignedTo = null,              // User UID
-    assignedToName = '',            // Denormalized for display
-    weekStartDate = '',             // ISO YYYY-MM-DD
+    // ── Required: scheduling fields ──
+    taskId = null,                  // Reference to tasks document (REQUIRED)
+    weekStartDate = '',             // ISO YYYY-MM-DD — Monday of the planned week
     date = '',                      // Date of this block: YYYY-MM-DD
     dayOfWeek = 1,                  // 0 = Sunday, 1 = Monday, etc.
     startDateTime = null,           // ISO datetime string
     endDateTime = null,             // ISO datetime string
     plannedHours = 0,               // Calculated: end - start
-    priority = TASK_PRIORITY.MEDIUM, // Snapshot from task
-    statusSnapshot = TASK_STATUS.PENDING, // Snapshot from task
-    colorKey = 'indigo',            // Visual color grouping
+    createdBy = null,               // User UID who created this block
+
+    // ── Optional: kept for query filtering / performance ──
+    assignedTo = null,              // User UID — duplicated for filter queries
+    projectId = null,               // Reference to projects document — duplicated for filter queries
     notes = '',
-    createdBy = null,
+
+    // ── @deprecated — TRANSITIONAL snapshot fields (legacy) ──
+    // These fields are still accepted for backward compatibility with
+    // existing Firestore documents but should NOT be read as source of truth.
+    // The frontend reads live data from tasks via enrichPlanItemsWithTasks().
+    // TODO migration: stop writing these after full data migration.
+    taskTitleSnapshot = '',         // @deprecated — use task.title via enrichment
+    projectNameSnapshot = '',       // @deprecated — use project.name via enrichment
+    assignedToName = '',            // @deprecated — use teamMember.displayName via enrichment
+    statusSnapshot = TASK_STATUS.PENDING, // @deprecated — use task.status via enrichment
+    priority = TASK_PRIORITY.MEDIUM,      // @deprecated — use task.priority via enrichment
+    colorKey = 'indigo',                  // @deprecated — derive from projectColorMap
 } = {}) {
     return {
+        // ── Scheduling (required) ──
         taskId,
-        taskTitleSnapshot,
-        projectId,
-        projectNameSnapshot,
-        assignedTo,
-        assignedToName,
         weekStartDate,
         date,
         dayOfWeek,
         startDateTime,
         endDateTime,
         plannedHours,
-        priority,
-        statusSnapshot,
-        colorKey,
-        notes,
         createdBy,
+
+        // ── Optional (for queries) ──
+        assignedTo,
+        projectId,
+        notes,
+
+        // ── @deprecated — TRANSITIONAL (legacy snapshots) ──
+        // TODO migration: remove these fields after migration is complete
+        taskTitleSnapshot,
+        projectNameSnapshot,
+        assignedToName,
+        statusSnapshot,
+        priority,
+        colorKey,
+
+        // ── Timestamps ──
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
     };
@@ -760,6 +909,206 @@ export function createTaskTypeCategoryDocument({
         order,
         active,
         createdAt: new Date().toISOString(),
+    };
+}
+
+
+// ============================================================
+// MANAGEMENT INTELLIGENCE — DOCUMENT FACTORIES
+// ============================================================
+
+/**
+ * AuditFindings Collection
+ * Rule violations and methodology compliance issues detected by the Rule Engine.
+ *
+ * Document ID: auto-generated
+ */
+export function createAuditFindingDocument({
+    entityType = 'task',            // 'task' | 'project' | 'user' | 'planner'
+    entityId = null,                // ID of the affected entity
+    ruleId = '',                    // Rule identifier (e.g., 'TASK_NO_ESTIMATE')
+    severity = AUDIT_FINDING_SEVERITY.WARNING,
+    status = AUDIT_FINDING_STATUS.OPEN,
+    title = '',
+    message = '',
+    recommendedAction = '',
+    scoreImpact = 0,                // Negative impact on compliance score
+    assignedTo = null,              // User UID responsible for resolving
+    resolvedAt = null,              // ISO string
+    resolvedBy = null,              // User UID who resolved
+    source = 'rule_engine',         // 'rule_engine' | 'manual' | 'ai'
+    metadata = {},                  // Additional context data
+} = {}) {
+    return {
+        entityType,
+        entityId,
+        ruleId,
+        severity,
+        status,
+        title,
+        message,
+        recommendedAction,
+        scoreImpact,
+        assignedTo,
+        resolvedAt,
+        resolvedBy,
+        source,
+        metadata,
+        detectedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+    };
+}
+
+/**
+ * AuditEvents Collection — OFFICIAL SCHEMA
+ * =========================================
+ * Immutable, append-only system audit trail.
+ * Written by Cloud Functions (task transitions, scheduled audits)
+ * and by client (audit run summaries only).
+ *
+ * IMPORTANT: All producers (CF + client) MUST follow this contract.
+ * See: functions/index.js, src/services/auditPersistence.js
+ *
+ * Document ID: auto-generated
+ */
+export function createAuditEventDocument({
+    eventType = '',           // 'task_transition' | 'audit_run' | 'delay_reported' | ...
+    entityType = '',          // 'task' | 'project' | 'user' | 'delay' | 'system'
+    entityId = '',            // Document ID of affected entity
+    userId = null,            // Firebase Auth UID (or 'system' for scheduled)
+    source = 'client',       // 'cloud_function' | 'scheduled' | 'client_audit'
+    correlationId = null,     // Groups related events (audit runId, batch ops)
+    details = {},             // Event-specific payload
+} = {}) {
+    return {
+        eventType,
+        entityType,
+        entityId,
+        userId,
+        source,
+        correlationId,
+        details,
+        timestamp: new Date().toISOString(),
+    };
+}
+
+/**
+ * AnalyticsSnapshots Collection
+ * Periodic health/compliance snapshots for department, project, or user.
+ *
+ * Document ID: `{scope}_{scopeRefId}_{YYYY-MM-DD}` or auto-generated
+ */
+export function createAnalyticsSnapshotDocument({
+    snapshotDate = '',              // YYYY-MM-DD
+    scope = ANALYTICS_SCOPE.DEPARTMENT,  // 'department' | 'project' | 'user'
+    scopeRefId = 'department',      // Reference ID (projectId, userId, or 'department')
+    methodologyCompliance = 0,      // 0–100 score
+    estimateAccuracy = 0,           // 0–100 score (actual vs estimated ratio)
+    planningReliability = 0,        // 0–100 score
+    dataDiscipline = 0,             // 0–100 score
+    overdueTasks = 0,
+    activeDelays = 0,
+    teamUtilization = 0,            // 0–100 percentage
+    totalTasksActive = 0,
+    totalTasksCompleted = 0,
+    totalHoursLogged = 0,
+    topBottlenecks = [],            // Array of strings
+    riskDistribution = {            // Count of projects by risk level
+        low: 0,
+        medium: 0,
+        high: 0,
+    },
+    metadata = {},
+} = {}) {
+    return {
+        snapshotDate,
+        scope,
+        scopeRefId,
+        methodologyCompliance,
+        estimateAccuracy,
+        planningReliability,
+        dataDiscipline,
+        overdueTasks,
+        activeDelays,
+        teamUtilization,
+        totalTasksActive,
+        totalTasksCompleted,
+        totalHoursLogged,
+        topBottlenecks,
+        riskDistribution,
+        metadata,
+        createdAt: new Date().toISOString(),
+    };
+}
+
+/**
+ * AIInsights Collection
+ * Gemini-generated insights and recommendations.
+ *
+ * Document ID: auto-generated
+ */
+export function createAIInsightDocument({
+    scope = 'weekly',               // 'daily' | 'weekly' | 'project' | 'team'
+    scopeRefId = 'department',      // Reference ID
+    type = AI_INSIGHT_TYPE.WEEKLY_SUMMARY,
+    title = '',
+    summary = '',
+    recommendations = [],           // Array of strings
+    sourceDataRefs = [],            // Array of document IDs used as input
+    confidence = 0,                 // 0–100 confidence in the insight
+    generatedBy = 'gemini',
+    metadata = {},
+} = {}) {
+    return {
+        scope,
+        scopeRefId,
+        type,
+        title,
+        summary,
+        recommendations,
+        sourceDataRefs,
+        confidence,
+        generatedBy,
+        metadata,
+        generatedAt: new Date().toISOString(),
+    };
+}
+
+/**
+ * ManagementBriefs Collection
+ * Weekly management summaries generated by Gemini.
+ *
+ * Document ID: `brief_{YYYY-MM-DD}` or auto-generated
+ */
+export function createManagementBriefDocument({
+    periodStart = '',               // ISO date string (YYYY-MM-DD)
+    periodEnd = '',                 // ISO date string (YYYY-MM-DD)
+    summary = '',                   // Natural language summary
+    keyFindings = [],               // Array of strings
+    recommendedActions = [],        // Array of strings
+    metrics = {                     // Key metrics for the period
+        tasksCompleted: 0,
+        tasksCreated: 0,
+        totalHoursLogged: 0,
+        overtimeHours: 0,
+        delaysReported: 0,
+        delaysResolved: 0,
+        avgEstimationAccuracy: 0,
+        methodologyScore: 0,
+    },
+    generatedBy = 'gemini',
+    metadata = {},
+} = {}) {
+    return {
+        periodStart,
+        periodEnd,
+        summary,
+        keyFindings,
+        recommendedActions,
+        metrics,
+        generatedBy,
+        metadata,
+        generatedAt: new Date().toISOString(),
     };
 }
 

@@ -22,3 +22,22 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Node.js binaries (local copies)
+node_bin/
+node22_bin/
+nodejs.msi
+
+# Diagnostic/temp files
+diagnostico_gemini*.cjs
+diagnostico_gemini*.js
+test_parser.js
+build_output.txt
+vite_log.txt
+.FullName
+
+# Firebase cache
+.firebase/
+
+# IDE specific
+.idx/

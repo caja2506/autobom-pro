@@ -283,6 +283,176 @@
                     "order": "DESCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "auditFindings",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "entityType",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "detectedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "auditFindings",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "severity",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "detectedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "auditFindings",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "entityId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "auditFindings",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "ruleId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "detectedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "analyticsSnapshots",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "scope",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "snapshotDate",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "analyticsSnapshots",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "scope",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "scopeRefId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "snapshotDate",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "aiInsights",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "scope",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "generatedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "aiInsights",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "type",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "generatedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "managementBriefs",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "periodStart",
+                    "order": "DESCENDING"
+                },
+                {
+                    "fieldPath": "generatedAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "auditEvents",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "eventType",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "timestamp",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "analyticsSnapshots",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "scope",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
         }
     ],
     "fieldOverrides": []

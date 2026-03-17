@@ -1,15 +1,26 @@
 import React, { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { X, Clock, User, Briefcase, Trash2, Save } from 'lucide-react';
+import { X, Clock, User, Briefcase, Trash2, Save, AlertTriangle } from 'lucide-react';
 import { TASK_PRIORITY_CONFIG, TASK_STATUS_CONFIG } from '../../models/schemas';
 
 /**
  * Modal/drawer to view and edit a planner time block.
- * Covers Phases 3, 7, and 8 requirements.
+ *
+ * Data source: enriched plan items via enrichPlanItemsWithTasks().
+ * Uses `item.title`, `item.projectName`, `item.status`, `item.assigneeDisplayName`
+ * which are resolved from live task data with snapshot fallback.
  */
 export default function PlannerTaskModal({ item, task, onClose, onSave, onDelete }) {
     if (!item) return null;
+
+    // Use enriched fields (with snapshot fallback already applied by enrichPlanItemsWithTasks)
+    const displayTitle    = item.title || item.taskTitleSnapshot || '(Sin título)';
+    const displayProject  = item.projectName || item.projectNameSnapshot || '';
+    const displayStatus   = item.status || item.statusSnapshot || 'pending';
+    const displayAssignee = item.assigneeDisplayName || item.assignedToName || '';
+    const displayPriority = item.priority || 'medium';
+    const isOrphan        = item._taskNotFound;
 
     const [startTime, setStartTime] = useState(
         item.startDateTime ? format(parseISO(item.startDateTime), "yyyy-MM-dd'T'HH:mm") : ''
@@ -28,7 +39,7 @@ export default function PlannerTaskModal({ item, task, onClose, onSave, onDelete
         } catch { return '—'; }
     };
 
-    const estimatedHours = task?.estimatedHours || 0;
+    const estimatedHours = task?.estimatedHours || item.estimatedHours || 0;
     const allTaskPlanned  = task?.totalPlannedHours || item.plannedHours || 0;
     const remaining       = estimatedHours - allTaskPlanned;
 
@@ -59,39 +70,47 @@ export default function PlannerTaskModal({ item, task, onClose, onSave, onDelete
                 <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-indigo-600 text-white shrink-0">
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Detalle del Bloque</p>
-                        <h2 className="font-black text-lg leading-tight">{item.taskTitleSnapshot}</h2>
+                        <h2 className="font-black text-lg leading-tight">{displayTitle}</h2>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-indigo-700 rounded-xl transition-colors ml-4 shrink-0">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
+                {/* Orphan warning */}
+                {isOrphan && (
+                    <div className="mx-5 mt-4 flex items-center gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-400 px-3 py-2 rounded-xl text-xs font-bold">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        Tarea no encontrada — mostrando datos legacy del snapshot
+                    </div>
+                )}
+
                 {/* Content */}
                 <div className="flex-1 p-5 space-y-5">
                     {/* Meta */}
                     <div className="flex flex-wrap gap-2">
-                        {item.projectNameSnapshot && (
+                        {displayProject && (
                             <span className="flex items-center gap-1 text-[10px] font-black bg-slate-800 text-slate-600 px-2.5 py-1 rounded-lg uppercase tracking-wider">
-                                <Briefcase className="w-3 h-3" /> {item.projectNameSnapshot}
+                                <Briefcase className="w-3 h-3" /> {displayProject}
                             </span>
                         )}
-                        {item.priority && TASK_PRIORITY_CONFIG[item.priority] && (
+                        {displayPriority && TASK_PRIORITY_CONFIG[displayPriority] && (
                             <span className="text-[10px] font-black bg-amber-500/15 text-amber-400 border border-amber-200 px-2.5 py-1 rounded-lg uppercase tracking-wider">
-                                {TASK_PRIORITY_CONFIG[item.priority].label}
+                                {TASK_PRIORITY_CONFIG[displayPriority].label}
                             </span>
                         )}
-                        {item.statusSnapshot && TASK_STATUS_CONFIG[item.statusSnapshot] && (
+                        {displayStatus && TASK_STATUS_CONFIG[displayStatus] && (
                             <span className="text-[10px] font-black bg-indigo-50 text-indigo-400 border border-indigo-100 px-2.5 py-1 rounded-lg uppercase tracking-wider">
-                                {TASK_STATUS_CONFIG[item.statusSnapshot].label}
+                                {TASK_STATUS_CONFIG[displayStatus].label}
                             </span>
                         )}
                     </div>
 
                     {/* Assigned */}
-                    {item.assignedToName && (
+                    {displayAssignee && (
                         <div className="flex items-center gap-2 text-sm text-slate-700 font-bold">
                             <User className="w-4 h-4 text-slate-400" />
-                            {item.assignedToName}
+                            {displayAssignee}
                         </div>
                     )}
 

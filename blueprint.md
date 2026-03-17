@@ -1,8 +1,8 @@
 # AutoBOM Pro — Engineering Management Platform Blueprint
 
-> **Version:** 2.0 — Platform Evolution  
-> **Last Updated:** 2026-03-11  
-> **Status:** Phase 1 Complete — Governance & Architecture Documented
+> **Version:** 4.0 — Full Platform + Management Intelligence + Hardening  
+> **Last Updated:** 2026-03-14  
+> **Status:** All core modules implemented — hardening and remediation in progress
 
 ---
 
@@ -25,6 +25,7 @@
 15. [Export Requirements](#15-export-requirements)
 16. [Technology Stack](#16-technology-stack)
 17. [Development Roadmap](#17-development-roadmap)
+18. [Audit Remediation Program](#18-audit-remediation-program)
 
 ---
 
@@ -242,15 +243,34 @@ The existing RBAC system (`admin`, `editor`, `viewer`) will be extended to suppo
 | **AI Import** (PDF, Excel) | ✅ Complete | Existing |
 | **Auth & RBAC** | ✅ Complete | Existing |
 | **Managed Lists** (Brands, Categories, Providers) | ✅ Complete | Existing |
-| **Firestore Data Model** (new collections) | 📋 Planned | Phase 2 |
-| **Navigation & Page Structure** | 📋 Planned | Phase 3 |
-| **Projects & Task Management** | 📋 Planned | Phase 4 |
-| **Time Tracking** | 📋 Planned | Phase 5 |
-| **Delays & Risk Detection** | 📋 Planned | Phase 6 |
-| **Reports (Daily/Weekly)** | 📋 Planned | Phase 7 |
-| **Engineering Dashboard** | 📋 Planned | Phase 8 |
-| **Engineering Analytics** | 📋 Planned | Phase 9 |
-| **Project Gantt (Weekly + Monthly)** | 📋 Planned | Phase 10 |
+| **Firestore Data Model** (new collections) | ✅ Complete | Phase 2 |
+| **Navigation & Page Structure** | ✅ Complete | Phase 3 |
+| **Projects & Task Management** | ✅ Complete | Phase 4 |
+| **Time Tracking** | ✅ Complete | Phase 5 |
+| **Delays & Risk Detection** | ✅ Complete | Phase 6 |
+| **Reports (Daily/Weekly)** | ✅ Complete | Phase 7 |
+| **Engineering Dashboard (Obeya)** | ✅ Complete | Phase 8 |
+| **Engineering Analytics** | ✅ Complete | Phase 9 |
+| **Project Gantt** | ✅ Complete | Phase 10 |
+| **Management Intelligence** (Rule Engine, Audit, AI) | ✅ Complete | Phase 11 |
+| **Workflow Enforcement** (CF-controlled transitions) | ✅ Complete | Phase 12 |
+| **Audit Trail** (Immutable events, scheduled audits) | ✅ Complete | Phase 13 |
+| **Team Overview** | ✅ Complete | Phase 14 |
+| **Notifications** (Firestore-based, user-scoped) | ✅ Complete | Phase 14 |
+| **Settings** | ⚠️ Placeholder | — |
+
+### Remediation & Hardening (2026-03-14)
+
+| Area | Action | Status |
+|------|--------|--------|
+| Data model: `completedAt` vs `completedDate` | Normalized to `completedDate` | ✅ Fixed |
+| Data model: `blockReason` vs `blockedReason` | Normalized to `blockedReason` | ✅ Fixed |
+| Planner validation (blocking + warnings) | Enforced B1-B7 blocking rules | ✅ Fixed |
+| CF score placeholders (`estimationAccuracy`, `dataDiscipline`) | Replaced with real formulas | ✅ Fixed |
+| `ownerOverloaded` in riskService | Implemented real overload detection | ✅ Fixed |
+| Audit engine: empty planner context | Now fetches real planner data | ✅ Fixed |
+| `taskNormalizer.js` for legacy docs | Created read-time normalizer | ✅ Created |
+| Official field contract | Documented in `schemas.js` | ✅ Documented |
 
 ---
 
@@ -489,12 +509,17 @@ riskScore =
 | **My Work** | User | Active tasks, running timers, today's summary |
 | **Projects** | FolderGit2 | Engineering projects + BOM management |
 | **Task Manager** | ListTodo | Kanban board, task CRUD |
+| **Weekly Planner** | CalendarDays | Weekly task scheduling grid |
+| **Project Gantt** | GanttChartSquare | Gantt chart (weekly/monthly) |
+| **Engineering Analytics** | BarChart3 | Performance metrics and trends |
 | **Work Logs** | Clock | Time entries, overtime tracking |
 | **Daily Reports** | FileText | Auto-generated daily summaries |
 | **Weekly Reports** | BarChart3 | Weekly analytics and trends |
 | **Team** | Users | Team member overview and workload |
 | **Notifications** | Bell | System alerts and updates |
 | **Admin / Settings** | Settings | Configuration, user management, delay causes |
+
+> **Design Rule:** Tasks, Weekly Planner, Gantt, and Analytics share a unified banner component (`TaskModuleBanner`) with tab navigation (see [Appendix B](#appendix-b-ui-design-standards)).
 
 ### Default Landing View ("My Work")
 
@@ -650,6 +675,64 @@ The system must support **Excel export** for:
 - [x] Build `ProjectGantt` page with Weekly / Monthly toggle + filters
 - [x] Add route `/gantt` and sidebar nav item "Project Gantt"
 
+### Phase 11 — Management Intelligence (MI) Layer ✅
+> **Status:** COMPLETE
+
+- [x] Analytics engine (`src/core/analytics/`) — snapshotBuilder, trendCalculator, teamUtilization
+- [x] Rule engine (`src/core/rules/`) — ruleEvaluator, ruleCatalog, taskRules, projectRules, plannerRules, userDisciplineRules
+- [x] Audit engine (`src/core/audit/`) — auditEngine, complianceScorer, findingBuilder
+- [x] Workflow engine (`src/core/workflow/`) — workflowModel, transitionValidator
+- [x] Gemini Copilot integration (`src/core/ai/`) — geminiService, insightGenerator
+- [x] Control Tower page (`src/pages/ControlTower.jsx`)
+- [x] Audit Findings page (`src/pages/AuditFindings.jsx`)
+- [x] Cloud Function: `generateInsights` (Gemini proxy for MI)
+- [x] Cloud Function: `scheduledAudit` (daily 6 AM CST)
+- [x] Audit persistence service (`src/services/auditPersistence.js`)
+- [x] Workflow transition UI (`src/components/workflow/TransitionConfirmModal.jsx`)
+
+### Phase R — Audit Remediation Program 📋
+> **Status:** BASELINE ESTABLISHED — See [`remediation-plan.md`](file:///c:/Users/CJ00083620/.gemini/antigravity/scratch/autobom-pro/remediation-plan.md)
+
+- [ ] Phase R.0 — Housekeeping & Documentation Consistency
+- [ ] Phase R.1 — Error Boundaries & Resilience
+- [ ] Phase R.2 — Test Infrastructure & Critical Path Coverage
+- [ ] Phase R.3 — AppDataContext Decomposition
+- [ ] Phase R.4 — schemas.js Modularization
+- [ ] Phase R.5 — Cloud Functions Modularization & Testing
+- [ ] Phase R.6 — CI/CD & Build Verification
+
+---
+
+## 18. Audit Remediation Program
+
+> **Reference:** [`remediation-plan.md`](file:///c:/Users/CJ00083620/.gemini/antigravity/scratch/autobom-pro/remediation-plan.md) — Full specification with Definition of Done per phase, dependency graph, regression risk matrix, and timeline.
+
+### Purpose
+
+Stabilize and harden the Engineering Management Platform after rapid iterative development across 11 feature phases. Focus on auditability, traceability, consistency, and regression prevention — **without breaking existing production functionality**.
+
+### Key Findings
+
+| Area | Current State | Target |
+|------|--------------|--------|
+| Test coverage | 1 test file (0.8%) | ≥ 70% on `src/core/` |
+| `AppDataContext` | 672 lines (god-context) | < 150 lines (decomposed) |
+| `architecture.md` | Outdated (pre-Phase 3) | Reflects actual structure |
+| Error boundaries | None | All major route groups |
+| CI/CD | None | Lint + Test + Build on PR |
+
+### Protected Modules (DO NOT MODIFY)
+
+The following modules **MUST NOT** be modified during remediation, except for mechanical import-path changes required by shared infrastructure refactoring:
+
+- **BOM Core**: `BomProjects.jsx`, `BomProjectDetail.jsx`, `Catalog.jsx`
+- **BOM Components**: `components/catalog/*`, `components/projects/*`
+- **AI Import Pipeline**: PDF/Excel import flows in `AppDataContext`
+- **Image Search**: `ImagePickerModal.jsx`, `searchImages` Cloud Function
+- **Login/Auth**: `LoginPage.jsx`, `AuthContext.jsx`
+- **Firestore Rules**: `firestore.rules`
+- **Cloud Function `analyzeQuotePdf`**: Production AI pipeline
+
 ---
 
 ## Appendix A: Execution Rules
@@ -661,3 +744,58 @@ The system must support **Excel export** for:
 5. **Do not refactor aggressively** — modularize incrementally
 6. **Always analyze before implementing** — read existing code before writing new code
 7. **Update this blueprint** after completing each phase
+8. **Follow UI Design Standards** — use shared module banners for related pages (see Appendix B)
+
+---
+
+## Appendix B: UI Design Standards
+
+### Shared Module Banner Pattern (TaskModuleBanner)
+
+**Rule:** Pages that belong to the same functional module **MUST** share a common banner component with tab navigation. This replaces individual, inconsistent headers across related pages.
+
+**Current Implementation:** `src/components/layout/TaskModuleBanner.jsx`
+
+#### Banner Structure
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  [Icon] Title                                    [🔍] [🔔] [⚙]  [+ New Task]  [Avatar] │
+│         Subtitle (active count • project count)                                        │
+├──────────────────────────────────────────────────────────────────┤
+│  Tareas   Weekly Planner   Gantt   Analytics   │  [page-specific toolbar ...]  │
+│  ═══════                                       │                               │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Title row** | Module icon, title, subtitle with live stats, action icons, + New Task button, user avatar |
+| **Tab row** | Navigation tabs between module pages, active tab has indigo underline |
+| **Children slot** | Each page can inject its own controls (filters, nav, toggles) on the right side of the tab bar |
+| **Auto-highlight** | Active tab detected from `location.pathname` via `react-router-dom` |
+
+#### Pages Using the Banner
+
+| Page | Path | Page-Specific Controls |
+|------|------|------------------------|
+| TaskManager | `/tasks` | Filter toggle button (collapsible filter bar) |
+| WeeklyPlanner | `/planner` | Week nav (← This Week →), team/project filters, conflict badge |
+| ProjectGantt | `/gantt` | View toggle (Semanal/Mensual), date nav, range label, filters, refresh |
+| EngineeringAnalytics | `/analytics` | *(to be added)* |
+
+#### Rules for Adding New Pages to a Module Banner
+
+1. Import `TaskModuleBanner` from `../components/layout/TaskModuleBanner.jsx`
+2. Pass `onNewTask` callback and `canEdit` prop
+3. Use the `children` slot for page-specific controls (filters, toggles, etc.)
+4. **Do not** create a separate header — all module context lives in the banner
+5. Add the page's path and label to the `TABS` array inside `TaskModuleBanner.jsx`
+
+#### When to Create a New Banner
+
+If a group of 2+ pages share a functional domain (e.g., BOM Management, Reports), create a dedicated `<ModuleBanner>` following the same pattern:
+- Row 1: Icon + Title + Stats + Actions
+- Row 2: Tabs + page-specific controls via children slot

@@ -2,20 +2,35 @@
  * Task Service
  * =============
  * Firestore CRUD operations for tasks, subtasks, and engineering projects.
+ *
+ * IMPORTANT — WORKFLOW ENFORCEMENT:
+ * Status transitions MUST go through updateTaskStatus() which calls the
+ * transitionTaskStatus Cloud Function. Direct Firestore writes to `status`
+ * are blocked by security rules. See functions/index.js for server logic.
  */
 
 import {
     collection, doc, setDoc, updateDoc, deleteDoc,
-    writeBatch, getDocs, query, where, orderBy
+    writeBatch, getDocs, query, where
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, functions } from '../firebase';
 import {
     COLLECTIONS,
     createProjectDocument,
     createTaskDocument,
     createSubtaskDocument,
 } from '../models/schemas';
-import { calculateProjectRisk } from './riskService';
+
+// ── Cloud Function reference for workflow transitions ──
+const transitionTaskStatusFn = httpsCallable(functions, 'transitionTaskStatus');
+
+// ── Fields that ONLY the Cloud Function may write ──
+// Defense-in-depth: strip these from any client-side updateTask() call
+const WORKFLOW_PROTECTED_FIELDS = [
+    'status', 'completedDate', 'completedAt',
+    'reopenedAt', 'reopenedBy', 'updatedBy',
+];
 
 // ============================================================
 // ENGINEERING PROJECTS
@@ -65,27 +80,60 @@ export async function createTask(data, userId) {
     return ref.id;
 }
 
+/**
+ * Update non-workflow fields on a task.
+ * SECURITY: Workflow-controlled fields are stripped before writing.
+ * To change status, use updateTaskStatus() which calls the Cloud Function.
+ */
 export async function updateTask(taskId, updates) {
+    // Strip protected fields — they can only be set by the Cloud Function
+    const safeUpdates = { ...updates };
+    for (const field of WORKFLOW_PROTECTED_FIELDS) {
+        delete safeUpdates[field];
+    }
+
     await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), {
-        ...updates,
+        ...safeUpdates,
         updatedAt: new Date().toISOString(),
     });
+
+    // Cascade projectId changes to time logs
+    if ('projectId' in safeUpdates) {
+        try {
+            const logsSnap = await getDocs(
+                query(collection(db, COLLECTIONS.TIME_LOGS), where('taskId', '==', taskId))
+            );
+            if (!logsSnap.empty) {
+                const batch = writeBatch(db);
+                logsSnap.docs.forEach(logDoc => {
+                    batch.update(logDoc.ref, { projectId: safeUpdates.projectId || null });
+                });
+                await batch.commit();
+                console.log(`[taskService] Synced projectId on ${logsSnap.size} time logs for task ${taskId}`);
+            }
+        } catch (err) {
+            console.warn('[taskService] Failed to sync projectId on time logs:', err.message);
+        }
+    }
 }
 
-export async function updateTaskStatus(taskId, newStatus, projectId) {
-    const updates = {
-        status: newStatus,
-        updatedAt: new Date().toISOString(),
-    };
-    if (newStatus === 'completed') {
-        updates.completedDate = new Date().toISOString();
-    }
-    await updateDoc(doc(db, COLLECTIONS.TASKS, taskId), updates);
-
-    // Recalculate risk if project is known
-    if (projectId) {
-        await calculateProjectRisk(projectId);
-    }
+/**
+ * Transition task status via Cloud Function (server-enforced).
+ *
+ * @param {string} taskId — task document ID
+ * @param {string} newStatus — target status (must be valid transition)
+ * @param {string} [projectId] — not used directly (CF reads from task doc)
+ * @param {boolean} [force=false] — skip required field validation (admin override)
+ * @returns {Object} — { success, previousStatus, newStatus, warnings[] }
+ * @throws {Error} — if transition is invalid or fields are missing
+ */
+export async function updateTaskStatus(taskId, newStatus, projectId, force = false) {
+    const result = await transitionTaskStatusFn({
+        taskId,
+        newStatus,
+        force,
+    });
+    return result.data;
 }
 
 export async function deleteTask(taskId) {
@@ -117,4 +165,16 @@ export async function toggleSubtask(subtaskId, completed) {
 
 export async function deleteSubtask(subtaskId) {
     await deleteDoc(doc(db, COLLECTIONS.SUBTASKS, subtaskId));
+}
+
+export async function updateSubtask(subtaskId, updates) {
+    await updateDoc(doc(db, COLLECTIONS.SUBTASKS, subtaskId), updates);
+}
+
+export async function reorderSubtasks(orderedIds) {
+    const batch = writeBatch(db);
+    orderedIds.forEach((id, index) => {
+        batch.update(doc(db, COLLECTIONS.SUBTASKS, id), { order: index });
+    });
+    await batch.commit();
 }

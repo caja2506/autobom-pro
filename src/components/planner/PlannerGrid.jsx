@@ -1,6 +1,7 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { MousePointerClick } from 'lucide-react';
 import PlannerTaskBlock from './PlannerTaskBlock';
 
 // ── Exported constants ─────────────────────────────────────────
@@ -9,13 +10,12 @@ export const PLANNER_END_HOUR   = 19;
 export const SLOT_HEIGHT_PX     = 64;  // pixels per 1-hour row
 
 // ── Break time bands ───────────────────────────────────────────
-// start/end in decimal hours (e.g. 15.5 = 15:30)
 const TIME_BANDS = [
     {
         id:     'desayuno',
         label:  '🍳 Desayuno',
-        start:  8,        // 08:00
-        end:    9,        // 09:00
+        start:  8,
+        end:    9,
         bg:     'rgba(251, 191, 36, 0.10)',
         border: 'rgba(245, 158, 11, 0.40)',
         text:   '#fcd34d',
@@ -23,8 +23,8 @@ const TIME_BANDS = [
     {
         id:     'almuerzo',
         label:  '🍽 Almuerzo',
-        start:  12,       // 12:00
-        end:    13,       // 13:00
+        start:  12,
+        end:    13,
         bg:     'rgba(52, 211, 153, 0.10)',
         border: 'rgba(16, 185, 129, 0.35)',
         text:   '#fde68a',
@@ -32,8 +32,8 @@ const TIME_BANDS = [
     {
         id:     'cafe',
         label:  '☕ Café',
-        start:  15.5,     // 15:30
-        end:    16,       // 16:00
+        start:  15.5,
+        end:    16,
         bg:     'rgba(249, 115, 22, 0.10)',
         border: 'rgba(234, 88, 12, 0.35)',
         text:   '#fdba74',
@@ -80,6 +80,10 @@ function computeColumnLayout(items) {
 
 /**
  * PlannerGrid — week columns × hour rows visual scheduler.
+ * 
+ * Supports:
+ *  - HTML5 drag-and-drop from sidebar and between grid slots
+ *  - Click-to-place mode (placingTask) for the "+" button flow
  */
 export default function PlannerGrid({
     weekDays,
@@ -90,9 +94,14 @@ export default function PlannerGrid({
     onBlockResize,
     onBlockClick,
     onBlockDelete,
+    placingTask,
+    onPlacementComplete,
 }) {
     const totalHours   = PLANNER_END_HOUR - PLANNER_START_HOUR;
     const scrollBodyRef = useRef(null);
+
+    // Hover state for placement mode ghost preview
+    const [hoverSlot, setHoverSlot] = useState(null); // { dayStr, hour, minute, top, dayIndex }
 
     // Scroll to DEFAULT_SCROLL_HOUR on first render
     useEffect(() => {
@@ -101,6 +110,19 @@ export default function PlannerGrid({
             scrollBodyRef.current.scrollTop = offset;
         }
     }, []);
+
+    // Clear hover when placement mode ends
+    useEffect(() => {
+        if (!placingTask) setHoverSlot(null);
+    }, [placingTask]);
+
+    // ESC to cancel placement
+    useEffect(() => {
+        if (!placingTask) return;
+        const handler = e => { if (e.key === 'Escape') onPlacementComplete && onPlacementComplete(null); };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, [placingTask, onPlacementComplete]);
 
     function getTopOffset(dateTimeStr) {
         if (!dateTimeStr) return 0;
@@ -150,9 +172,35 @@ export default function PlannerGrid({
         }
     }
 
+    // ── Placement mode: mouse tracking on day columns ──────────
+    function handlePlacementMouseMove(e, dayDate, dayIndex) {
+        if (!placingTask) return;
+        const rect  = e.currentTarget.getBoundingClientRect();
+        const relY  = Math.max(0, e.clientY - rect.top);
+        const { hour, minute } = snapToHour(relY);
+        const dayStr = format(dayDate, 'yyyy-MM-dd');
+        const top    = (hour - PLANNER_START_HOUR + minute / 60) * SLOT_HEIGHT_PX;
+        setHoverSlot({ dayStr, hour, minute, top, dayIndex });
+    }
+
+    function handlePlacementClick(e, dayDate) {
+        if (!placingTask) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const rect  = e.currentTarget.getBoundingClientRect();
+        const relY  = Math.max(0, e.clientY - rect.top);
+        const { hour, minute } = snapToHour(relY);
+        const dayStr = format(dayDate, 'yyyy-MM-dd');
+        onPlacementComplete && onPlacementComplete({ taskId: placingTask.id, date: dayStr, hour, minute });
+    }
+
+    function handlePlacementMouseLeave() {
+        setHoverSlot(null);
+    }
+
     const hours = Array.from({ length: totalHours }, (_, i) => PLANNER_START_HOUR + i);
 
-    // ── Compute per-day layout (header + body share this) ────
+    // ── Compute per-day layout ────────────────────────────────
     const dayLayouts = weekDays.map(({ date: dayDate, isToday }) => {
         const dayStr      = format(dayDate, 'yyyy-MM-dd');
         const rawItems    = planItems.filter(p => p.date === dayStr);
@@ -164,9 +212,27 @@ export default function PlannerGrid({
         return { dayDate, dayStr, isToday, layoutItems, dynMinWidth };
     });
 
+    // Ghost preview height (default 1h block for the task being placed)
+    const ghostHeight = placingTask
+        ? Math.min(2, placingTask.estimatedHours || 1) * SLOT_HEIGHT_PX
+        : SLOT_HEIGHT_PX;
+
     // ── Render ────────────────────────────────────────────────
     return (
         <div className="flex flex-col h-full">
+
+            {/* ── Placement mode top banner ── */}
+            {placingTask && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/15 border-b border-emerald-500/30 shrink-0 z-20">
+                    <MousePointerClick className="w-4 h-4 text-emerald-400 animate-bounce" />
+                    <span className="text-xs font-black text-emerald-300">
+                        Haz clic en la grilla para colocar: <span className="text-emerald-200">{placingTask.title}</span>
+                    </span>
+                    <span className="text-[10px] text-emerald-400/70 ml-auto font-medium">
+                        ESC para cancelar
+                    </span>
+                </div>
+            )}
 
             {/* ── Fixed header row (never scrolls) ── */}
             <div
@@ -220,7 +286,7 @@ export default function PlannerGrid({
 
                 {/* Day columns */}
                 <div className="flex flex-1 min-w-0" style={{ minHeight: totalHours * SLOT_HEIGHT_PX }}>
-                    {dayLayouts.map(({ dayDate, dayStr, layoutItems, dynMinWidth }) => (
+                    {dayLayouts.map(({ dayDate, dayStr, layoutItems, dynMinWidth }, dayIndex) => (
                         <div
                             key={dayStr}
                             className="flex flex-col border-r border-slate-800 last:border-r-0"
@@ -228,10 +294,15 @@ export default function PlannerGrid({
                         >
                             {/* Drop zone */}
                             <div
-                                className="relative"
+                                className={`relative ${placingTask ? 'cursor-crosshair' : ''}`}
                                 style={{ height: totalHours * SLOT_HEIGHT_PX }}
                                 onDragOver={handleDragOver}
                                 onDrop={e => handleDrop(e, dayDate)}
+                                onMouseMove={e => handlePlacementMouseMove(e, dayDate, dayIndex)}
+                                onMouseLeave={handlePlacementMouseLeave}
+                                onClick={e => {
+                                    if (placingTask) handlePlacementClick(e, dayDate);
+                                }}
                             >
                                 {/* Hour grid lines */}
                                 {hours.map(h => (
@@ -247,7 +318,7 @@ export default function PlannerGrid({
                                     </React.Fragment>
                                 ))}
 
-                                {/* ── Break / routine time bands (z-[5], below task blocks) ── */}
+                                {/* ── Break / routine time bands ── */}
                                 {TIME_BANDS.map(band => {
                                     const top    = (band.start - PLANNER_START_HOUR) * SLOT_HEIGHT_PX;
                                     const height = (band.end - band.start) * SLOT_HEIGHT_PX;
@@ -273,6 +344,32 @@ export default function PlannerGrid({
                                         </div>
                                     );
                                 })}
+
+                                {/* ── Placement mode: ghost preview block ── */}
+                                {placingTask && hoverSlot && hoverSlot.dayStr === dayStr && (
+                                    <div
+                                        className="absolute left-1 right-1 rounded-xl border-2 border-dashed border-emerald-400/60 bg-emerald-500/15 pointer-events-none flex flex-col items-center justify-center gap-0.5 z-[15] transition-all duration-100"
+                                        style={{
+                                            top: hoverSlot.top,
+                                            height: ghostHeight,
+                                        }}
+                                    >
+                                        <MousePointerClick className="w-4 h-4 text-emerald-400" />
+                                        <span className="text-[10px] font-black text-emerald-300 truncate px-2 max-w-full">
+                                            {placingTask.title}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-emerald-400/80">
+                                            {`${String(hoverSlot.hour).padStart(2, '0')}:${String(hoverSlot.minute).padStart(2, '0')}`}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* ── Placement mode: full-column subtle highlight ── */}
+                                {placingTask && (
+                                    <div
+                                        className="absolute inset-0 bg-emerald-500/5 pointer-events-none z-[1]"
+                                    />
+                                )}
 
                                 {/* ── Task blocks (z-20, above bands) ── */}
                                 {layoutItems.map(item => {

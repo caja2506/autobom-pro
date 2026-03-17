@@ -1,15 +1,15 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-    LayoutDashboard, FolderGit2, Database, ListTodo, User
+    LayoutDashboard, FolderGit2, Database, ListTodo, User, Shield
 } from 'lucide-react';
 
 const MOBILE_NAV_ITEMS = [
     { to: '/', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/my-work', label: 'Mi Trabajo', icon: User },
-    { to: '/bom/projects', label: 'Proyectos', icon: FolderGit2 },
-    { to: '/catalog', label: 'Catálogo', icon: Database },
     { to: '/tasks', label: 'Tareas', icon: ListTodo },
+    { to: '/audit', label: 'Auditoría', icon: Shield },
+    { to: '/bom/projects', label: 'BOM', icon: FolderGit2 },
 ];
 
 export default function MobileNav() {

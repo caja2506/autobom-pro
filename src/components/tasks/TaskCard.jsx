@@ -11,42 +11,41 @@ import {
     TASK_PRIORITY_CONFIG,
 } from '../../models/schemas';
 
-// Mapping tailwind color safe-classes so they don't get purged
-const PRIORITY_STYLES = {
-    low: { // Verde
-        dot: 'bg-emerald-500',
-        text: 'text-emerald-400',
-        bg: 'bg-emerald-500/10 border-emerald-500/30',
-        shadow: 'hover:shadow-emerald-500/20',
+// ── Priority pill colors ──
+const PRIORITY_COLORS = {
+    low: {
+        bg: 'rgba(5, 150, 105, 0.15)',
+        border: 'rgba(16, 185, 129, 0.35)',
+        text: '#34d399',
+        dot: '#34d399',
     },
-    medium: { // Amarillo
-        dot: 'bg-amber-400',
-        text: 'text-amber-400',
-        bg: 'bg-amber-500/10 border-amber-500/30',
-        shadow: 'hover:shadow-amber-400/20',
+    medium: {
+        bg: 'rgba(217, 119, 6, 0.15)',
+        border: 'rgba(245, 158, 11, 0.35)',
+        text: '#fbbf24',
+        dot: '#fbbf24',
     },
-    high: { // Naranja
-        dot: 'bg-orange-500',
-        text: 'text-orange-400',
-        bg: 'bg-orange-500/10 border-orange-500/30',
-        shadow: 'hover:shadow-orange-400/20',
+    high: {
+        bg: 'rgba(234, 88, 12, 0.15)',
+        border: 'rgba(249, 115, 22, 0.35)',
+        text: '#fb923c',
+        dot: '#fb923c',
     },
-    critical: { // Rojo Intenso
-        dot: 'bg-red-700',
-        text: 'text-red-400',
-        bg: 'bg-red-500/15 border-red-500/40 ring-1 ring-red-500/30',
-        shadow: 'hover:shadow-red-500/30',
-    }
+    critical: {
+        bg: 'rgba(239, 68, 68, 0.15)',
+        border: 'rgba(239, 68, 68, 0.4)',
+        text: '#f87171',
+        dot: '#ef4444',
+    },
 };
+
+// ── Shared pill class for all tags ──
+const PILL = 'h-6 inline-flex items-center gap-1 px-2.5 rounded-full text-[10px] font-semibold border';
+const ICON = 'w-3 h-3 flex-shrink-0';
 
 export default function TaskCard({ task, project, teamMembers, subtasks = [], onClick, isDragOverlay = false }) {
     const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
+        attributes, listeners, setNodeRef, transform, transition, isDragging,
     } = useSortable({
         id: task.id,
         data: { type: 'task', task },
@@ -58,13 +57,9 @@ export default function TaskCard({ task, project, teamMembers, subtasks = [], on
         opacity: isDragging ? 0.3 : 1,
     };
 
-    const statusConfig = TASK_STATUS_CONFIG[task.status] || {};
     const priorityConfig = TASK_PRIORITY_CONFIG[task.priority] || {};
+    const pColor = PRIORITY_COLORS[task.priority?.toLowerCase()] || PRIORITY_COLORS.medium;
 
-    // Safely fallback style to medium if priority isn't strictly recognized
-    const priorityStyle = PRIORITY_STYLES[task.priority?.toLowerCase()] || PRIORITY_STYLES.medium;
-
-    const assigner = teamMembers.find(u => u.uid === task.assignedBy);
     const assignee = teamMembers.find(u => u.uid === task.assignedTo);
 
     const completedSubtasks = subtasks.filter(s => s.completed).length;
@@ -73,7 +68,7 @@ export default function TaskCard({ task, project, teamMembers, subtasks = [], on
 
     const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'completed' && task.status !== 'cancelled';
 
-    // Live Timer Engine specifically for IN_PROGRESS tasks
+    // Live Timer
     const [liveElapsed, setLiveElapsed] = useState(null);
 
     useEffect(() => {
@@ -90,144 +85,131 @@ export default function TaskCard({ task, project, teamMembers, subtasks = [], on
                 setLiveElapsed(null);
             }
         };
-
-        checkAndTick(); // initial check
-
-        if (task.status === 'in_progress') {
-            interval = setInterval(checkAndTick, 1000);
-        }
-
+        checkAndTick();
+        if (task.status === 'in_progress') interval = setInterval(checkAndTick, 1000);
         return () => clearInterval(interval);
     }, [task.status, task.id]);
 
-    // Base card class combining Tailwind, priority styles, and dynamic states
-    let cardClassName = `rounded-2xl border-2 p-4 transition-all duration-200 ease-in-out group cursor-grab active:cursor-grabbing backdrop-blur-sm relative overflow-hidden ${priorityStyle.bg} ${priorityStyle.shadow}`;
+    // ── Card class ──
+    let cardCls = 'rounded-xl border p-3.5 transition-all duration-200 group cursor-grab active:cursor-grabbing relative';
+    cardCls += ' bg-slate-900/80 backdrop-blur-md border-slate-700/50 shadow-lg shadow-black/10';
+    cardCls += ' hover:shadow-xl hover:shadow-black/20 hover:-translate-y-0.5 hover:border-slate-600/60';
 
-    if (isDragging) {
-        cardClassName += ' shadow-2xl ring-2 ring-indigo-400 scale-105 z-50';
-    } else if (isDragOverlay) {
-        cardClassName += ' shadow-2xl ring-2 ring-indigo-400 rotate-2';
-    } else {
-        cardClassName += ' hover:shadow-lg hover:-translate-y-1';
-    }
+    if (isDragging) cardCls += ' shadow-2xl ring-2 ring-indigo-400 scale-[1.03] z-50';
+    else if (isDragOverlay) cardCls += ' shadow-2xl ring-2 ring-indigo-400 rotate-[2deg]';
+    if (isOverdue) cardCls += ' border-red-500/40 shadow-red-500/10';
 
-    if (isOverdue) {
-        cardClassName += ' border-red-500/40 shadow-red-500/20';
-    }
+    // ── Initials helper ──
+    const getInitials = (member) => {
+        const name = member.displayName || member.email || '?';
+        const parts = name.trim().split(/\s+/);
+        return parts.length >= 2
+            ? (parts[0][0] + parts[1][0]).toUpperCase()
+            : name[0].toUpperCase();
+    };
 
     return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className={cardClassName}
-        >
-            {/* Optional gradient accent on the left border to make it pop more */}
-            <div className={`absolute top-0 left-0 w-1.5 h-full ${priorityStyle.dot} opacity-80`} />
+        <div ref={setNodeRef} style={style} className={cardCls}>
 
-            {/* Top Row: Drag Handle + Priority + Project */}
-            <div className="flex items-center justify-between mb-2.5 ml-1">
-                <div className="flex items-center gap-2">
+            {/* ── Row 1: Drag + Priority + Project ── */}
+            <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-1.5">
                     <button
                         {...attributes}
                         {...listeners}
-                        className="p-1 -ml-1 text-slate-500 hover:text-indigo-400 cursor-grab active:cursor-grabbing touch-none rounded-md hover:bg-slate-700/50 transition-colors"
+                        className="p-0.5 text-slate-600 hover:text-indigo-400 cursor-grab active:cursor-grabbing touch-none transition-colors"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <GripVertical className="w-4 h-4" />
+                        <GripVertical className={ICON} />
                     </button>
 
-                    <div className="flex items-center gap-1.5 bg-slate-900/60 px-2 py-0.5 rounded-full border border-slate-700 shadow-lg">
-                        <span className={`w-2 h-2 rounded-full ${priorityStyle.dot} shadow-inner`}></span>
-                        <span className={`text-[10px] font-black uppercase tracking-wider ${priorityStyle.text}`}>
-                            {priorityConfig.label}
-                        </span>
-                    </div>
+                    {/* Priority pill */}
+                    <span
+                        className={PILL}
+                        style={{
+                            backgroundColor: pColor.bg,
+                            borderColor: pColor.border,
+                            color: pColor.text,
+                        }}
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: pColor.dot }} />
+                        {(priorityConfig.label || 'Media').toUpperCase()}
+                    </span>
                 </div>
+
+                {/* Project pill */}
                 {project && (
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-900/60 px-2.5 py-0.5 rounded-full truncate max-w-[120px] shadow-lg border border-slate-700">
+                    <span className={`${PILL} bg-slate-800/80 text-slate-400 border-slate-700/50 truncate max-w-[110px]`}>
                         {project.name}
                     </span>
                 )}
             </div>
 
-            {/* Title — clickable to open modal */}
+            {/* ── Title ── */}
             <h4
-                className="font-bold text-[15px] text-slate-200 leading-snug mb-2 line-clamp-2 group-hover:text-indigo-400 transition-colors cursor-pointer ml-1 drop-shadow-lg"
+                className="font-bold text-sm text-slate-100 leading-snug mb-2.5 line-clamp-2 group-hover:text-indigo-300 transition-colors cursor-pointer"
                 onClick={onClick}
             >
                 {task.title}
             </h4>
 
-            {/* Description preview */}
-            {task.description && (
-                <p className="text-xs text-slate-400/90 line-clamp-2 mb-4 leading-relaxed ml-1 font-medium">
-                    {task.description}
-                </p>
-            )}
-
-            {/* Subtask progress */}
+            {/* ── Subtask Progress ── */}
             {subtaskProgress != null && (
-                <div className="mb-4 ml-1">
-                    <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[11px] font-bold text-slate-500 flex items-center">
-                            <CheckCheck className="w-3.5 h-3.5 inline mr-1 text-indigo-400" />
+                <div className="mb-3">
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
+                            <CheckCheck className={`${ICON} text-indigo-400`} />
                             {completedSubtasks} / {totalSubtasks}
                         </span>
-                        <span className="text-[11px] font-bold text-indigo-400 bg-indigo-50 px-1.5 rounded">{subtaskProgress}%</span>
+                        <span className="text-[10px] font-semibold text-indigo-400">{subtaskProgress}%</span>
                     </div>
-                    <div className="h-2 bg-slate-800/80 rounded-full overflow-hidden shadow-inner border border-slate-700/50">
+                    <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
                         <div
-                            className={`h-full rounded-full transition-all duration-500 ${subtaskProgress === 100 ? 'bg-gradient-to-r from-emerald-400 to-green-500' : 'bg-gradient-to-r from-indigo-400 to-blue-500'} shadow-sm`}
+                            className={`h-full rounded-full transition-all duration-500 ${subtaskProgress === 100
+                                ? 'bg-gradient-to-r from-emerald-400 to-green-500'
+                                : 'bg-gradient-to-r from-indigo-500 to-blue-500'
+                                }`}
                             style={{ width: `${subtaskProgress}%` }}
                         />
                     </div>
                 </div>
             )}
 
-            {/* Bottom Row: Assignees + Due Date */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-700/50 ml-1">
-                {/* Assignee */}
-                <div className="flex items-center">
-                    {assignee ? (
-                        <div className="flex items-center gap-1.5" title={`Asignado a: ${assignee.displayName || assignee.email}`}>
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-xs font-black text-amber-400 ring-2 ring-white shadow-lg">
-                                {(assignee.displayName || assignee.email || '?')[0].toUpperCase()}
-                            </div>
-                            <div className="flex flex-col justify-center">
-                                <span className="text-[8px] font-black text-slate-400 uppercase leading-none mb-0.5 tracking-wider">Asignado a</span>
-                                <span className="text-[11px] font-bold text-slate-300 leading-none truncate max-w-[85px]">
-                                    {assignee.displayName?.split(' ')[0] || assignee.email?.split('@')[0]}
-                                </span>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-1.5">
-                            <div className="w-7 h-7 rounded-full bg-slate-800/80 flex items-center justify-center ring-2 ring-slate-700 shadow-lg border border-slate-600/50">
-                                <User className="w-3.5 h-3.5 text-slate-400" />
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-400 italic">Sin asignar</span>
-                        </div>
-                    )}
-                </div>
+            {/* ── Row 3: Avatar + Tags ── */}
+            <div className="flex items-center justify-between pt-2.5 border-t border-slate-700/40">
+                {/* Avatar */}
+                {assignee ? (
+                    <div
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold ring-2 ring-amber-500/30 flex-shrink-0"
+                        style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#b45309' }}
+                        title={assignee.displayName || assignee.email}
+                    >
+                        {getInitials(assignee)}
+                    </div>
+                ) : (
+                    <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center ring-2 ring-slate-700 flex-shrink-0">
+                        <User className="w-3 h-3 text-slate-500" />
+                    </div>
+                )}
 
-                {/* Metrics: Hours & Dates */}
-                <div className="flex items-center gap-2.5">
-                    {/* Hours Tag / Live Timer */}
+                {/* Tags */}
+                <div className="flex items-center gap-1.5">
+                    {/* Timer / Hours */}
                     {liveElapsed ? (
-                        <span className="text-[10px] font-black flex items-center gap-1 px-2 py-1 rounded-md shadow-lg border bg-indigo-500/15 text-indigo-400 border-indigo-500/30 animate-pulse ring-1 ring-indigo-500/40">
-                            <Clock className="w-3 h-3 text-indigo-500" />
-                            <span className="tabular-nums tracking-tight">{liveElapsed}</span>
+                        <span className={`${PILL} bg-indigo-500/15 text-indigo-400 border-indigo-500/30 animate-pulse`}>
+                            <Clock className={ICON} />
+                            <span className="tabular-nums">{liveElapsed}</span>
                         </span>
                     ) : (task.actualHours > 0 || task.estimatedHours > 0) ? (
-                        <span className={`text-[10px] font-black flex items-center gap-1 px-2 py-1 rounded-md shadow-lg border ${task.actualHours > 0 && task.estimatedHours > 0 && task.actualHours > task.estimatedHours
-                            ? 'bg-red-500/15 text-red-400 border-red-500/30' // Exceeded
+                        <span className={`${PILL} ${task.actualHours > 0 && task.estimatedHours > 0 && task.actualHours > task.estimatedHours
+                            ? 'bg-red-500/10 text-red-400 border-red-500/30'
                             : task.actualHours > 0
-                                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' // On track
-                                : 'bg-slate-800 text-slate-400 border-slate-700' // Not started
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                : 'bg-slate-800/60 text-slate-400 border-slate-700/50'
                             }`}>
-                            <Clock className={`w-3 h-3 ${task.actualHours > task.estimatedHours ? 'text-red-500' : 'text-slate-400'}`} />
+                            <Clock className={ICON} />
                             {task.actualHours > 0 && task.estimatedHours > 0
-                                ? <>{formatDuration(task.actualHours)} <span className="opacity-50">/ {task.estimatedHours}h</span></>
+                                ? <>{formatDuration(task.actualHours)}<span className="opacity-50"> / {task.estimatedHours}h</span></>
                                 : task.actualHours > 0
                                     ? formatDuration(task.actualHours)
                                     : `${task.estimatedHours}h est.`
@@ -235,24 +217,24 @@ export default function TaskCard({ task, project, teamMembers, subtasks = [], on
                         </span>
                     ) : null}
 
-                    {/* Date Tag */}
+                    {/* Date */}
                     {task.dueDate && (
-                        <span className={`text-[10px] font-black flex items-center gap-1 px-2 py-1 rounded-md shadow-lg border ${isOverdue
-                            ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                            : 'bg-slate-800 text-slate-400 border-slate-700'
+                        <span className={`${PILL} ${isOverdue
+                            ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                            : 'bg-slate-800/60 text-slate-400 border-slate-700/50'
                             }`}>
-                            <Calendar className={`w-3 h-3 ${isOverdue ? 'text-red-500' : 'text-slate-400'}`} />
+                            <Calendar className={ICON} />
                             {new Date(task.dueDate).toLocaleDateString('es', { day: '2-digit', month: 'short' })}
                         </span>
                     )}
                 </div>
             </div>
 
-            {/* Blocked indicator */}
+            {/* ── Blocked ── */}
             {task.status === 'blocked' && task.blockedReason && (
-                <div className="mt-3 bg-red-500/15 border border-red-500/30 rounded-lg px-3 py-2 flex items-start gap-2 shadow-lg ml-1">
-                    <AlertTriangle className="w-3.5 h-3.5 text-red-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-[11px] text-red-300 font-bold leading-tight">{task.blockedReason}</span>
+                <div className="mt-2.5 bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2 flex items-start gap-2">
+                    <AlertTriangle className="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" />
+                    <span className="text-[10px] text-red-300 font-semibold leading-tight">{task.blockedReason}</span>
                 </div>
             )}
         </div>

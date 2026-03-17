@@ -13,13 +13,16 @@ import { useRole } from '../contexts/RoleContext';
 import { useAppData } from '../contexts/AppDataContext';
 import TaskCard from '../components/tasks/TaskCard';
 import TaskDetailModal from '../components/tasks/TaskDetailModal';
+import TransitionConfirmModal from '../components/workflow/TransitionConfirmModal';
+import TaskModuleBanner from '../components/layout/TaskModuleBanner';
+import { useWorkflowTransition } from '../hooks/useWorkflowTransition';
 import { updateTaskStatus } from '../services/taskService';
 import { startTimer, stopTimer, getActiveTimer } from '../services/timeService';
 import {
     TASK_STATUS, TASK_STATUS_CONFIG, TASK_PRIORITY_CONFIG
 } from '../models/schemas';
 import {
-    Plus, Search, ListTodo, ArrowRight
+    Plus, Search, Menu, Filter, X
 } from 'lucide-react';
 
 // ============================================================
@@ -34,26 +37,28 @@ function KanbanColumn({ status, children, taskCount }) {
     });
 
     return (
-        <div className="min-w-[280px] w-[280px] flex flex-col rounded-2xl">
+        <div className="min-w-[250px] flex-1 flex flex-col">
             {/* Column Header */}
-            <div className="flex items-center justify-between mb-3 px-1">
-                <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cfg.color }} />
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">{cfg.label}</h3>
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded-full">
-                        {taskCount}
-                    </span>
-                </div>
+            <div className="flex items-center gap-2.5 mb-4 px-1">
+                <span
+                    className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                    style={{ backgroundColor: cfg.color }}
+                />
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.15em] leading-none">
+                    {cfg.label.toUpperCase()}
+                </h3>
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-800/80 px-2 py-0.5 rounded-full border border-slate-700/50 leading-none">
+                    {taskCount}
+                </span>
             </div>
 
             {/* Column Drop Zone */}
             <div
                 ref={setNodeRef}
-                className={`flex-1 space-y-3 overflow-y-auto pr-1 scrollbar-thin pb-2 rounded-2xl transition-all duration-200 ${isOver
-                    ? 'bg-indigo-500/10 ring-2 ring-indigo-500/40 ring-dashed p-2'
+                className={`flex-1 space-y-3 overflow-y-auto pr-1 rounded-2xl transition-all duration-200 min-h-[120px] ${isOver
+                    ? 'bg-indigo-500/10 ring-2 ring-indigo-500/40 ring-dashed p-2.5'
                     : 'p-0'
                     }`}
-                style={{ minHeight: '120px' }}
             >
                 {children}
             </div>
@@ -71,6 +76,7 @@ const KANBAN_COLUMNS = [
     TASK_STATUS.IN_PROGRESS,
     TASK_STATUS.VALIDATION,
     TASK_STATUS.COMPLETED,
+    TASK_STATUS.BLOCKED,
 ];
 
 // ============================================================
@@ -91,19 +97,22 @@ export default function TaskManager() {
 
     // Drag state
     const [activeId, setActiveId] = useState(null);
+    const [showFilters, setShowFilters] = useState(false);
 
     const openNew = () => { setSelectedTask(null); setIsModalOpen(true); };
     const openTask = (task) => { setSelectedTask(task); setIsModalOpen(true); };
     const closeModal = () => { setIsModalOpen(false); setSelectedTask(null); };
 
-    // --- Sensors (pointer + touch with activation distance) ---
+    // Workflow transition hook
+    const {
+        requestTransition, confirmTransition, cancelTransition,
+        pendingTransition, transitionError, isTransitioning,
+    } = useWorkflowTransition();
+
+    // --- Sensors ---
     const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: { distance: 8 },
-        }),
-        useSensor(TouchSensor, {
-            activationConstraint: { delay: 200, tolerance: 6 },
-        }),
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }),
     );
 
     // --- Filter tasks ---
@@ -126,7 +135,6 @@ export default function TaskManager() {
             if (map[t.status]) map[t.status].push(t);
             else map[TASK_STATUS.BACKLOG].push(t);
         });
-        // Sort each column by priority
         const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
         Object.keys(map).forEach(key => {
             map[key].sort((a, b) => (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2));
@@ -137,8 +145,7 @@ export default function TaskManager() {
     // Active dragged task
     const activeTask = activeId ? engTasks.find(t => t.id === activeId) : null;
 
-    // Blocked/cancelled
-    const blockedTasks = tasksByStatus[TASK_STATUS.BLOCKED] || [];
+    // Cancelled (only shown if any exist, in a collapsed section)
     const cancelledTasks = tasksByStatus[TASK_STATUS.CANCELLED] || [];
 
     // --- DnD Handlers ---
@@ -155,24 +162,29 @@ export default function TaskManager() {
         const task = engTasks.find(t => t.id === taskId);
         if (!task) return;
 
-        // Determine target status
         let targetStatus = null;
 
         if (over.data?.current?.type === 'column') {
             targetStatus = over.data.current.status;
         } else if (over.data?.current?.type === 'task') {
-            // Dropped over another task — use that task's status
             const overTask = engTasks.find(t => t.id === over.id);
             if (overTask) targetStatus = overTask.status;
         }
 
         if (!targetStatus || targetStatus === task.status) return;
 
-        // Optimistic update is handled by Firestore subscription
-        try {
-            await updateTaskStatus(taskId, targetStatus, task.projectId);
+        const result = requestTransition(task, targetStatus, user.uid);
 
-            // Auto-Timer logic for IN_PROGRESS
+        if (!result.allowed) {
+            console.warn('Transition blocked:', result.error);
+            return;
+        }
+
+        if (result.needsConfirmation) return;
+
+        try {
+            await result.execute();
+
             if (targetStatus === TASK_STATUS.IN_PROGRESS && task.status !== TASK_STATUS.IN_PROGRESS) {
                 const currentActive = getActiveTimer();
                 if (!currentActive) {
@@ -187,14 +199,14 @@ export default function TaskManager() {
         } catch (err) {
             console.error('Error updating task status:', err);
         }
-    }, [engTasks, canEdit, user]);
+    }, [engTasks, canEdit, user, requestTransition]);
 
     const handleDragCancel = useCallback(() => {
         setActiveId(null);
     }, []);
 
     return (
-        <div className="space-y-4 animate-in fade-in duration-300 h-full flex flex-col">
+        <div className="-m-4 md:-m-8 flex flex-col bg-slate-950 text-white" style={{ minHeight: '100vh' }}>
             <TaskDetailModal
                 isOpen={isModalOpen}
                 onClose={closeModal}
@@ -208,71 +220,86 @@ export default function TaskManager() {
                 canDelete={canDelete}
             />
 
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/70 backdrop-blur-sm p-5 rounded-2xl border border-slate-800 shadow-lg flex-shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-600/20 border border-indigo-500/30 rounded-xl flex items-center justify-center">
-                        <ListTodo className="w-5 h-5 text-indigo-400" />
-                    </div>
-                    <div>
-                        <h2 className="font-black text-xl text-white tracking-tight">Tablero de Tareas</h2>
-                        <p className="text-[10px] text-slate-400 font-bold">
-                            {engTasks.length} tarea{engTasks.length !== 1 ? 's' : ''} en total
-                            <span className="text-slate-600 mx-1.5">•</span>
-                            <ArrowRight className="w-3 h-3 inline text-indigo-400" /> Arrastra para mover
-                        </p>
-                    </div>
+            <TransitionConfirmModal
+                isOpen={!!pendingTransition}
+                pending={pendingTransition}
+                isTransitioning={isTransitioning}
+                onConfirm={confirmTransition}
+                onCancel={cancelTransition}
+            />
+
+            {/* Transition Error Toast */}
+            {transitionError && (
+                <div className="fixed bottom-24 md:bottom-4 left-1/2 -translate-x-1/2 z-[201] bg-rose-600 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-lg animate-in fade-in slide-in-from-bottom-4">
+                    {transitionError}
                 </div>
-                {canEdit && (
-                    <button
-                        onClick={openNew}
-                        className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-black shadow-lg shadow-indigo-500/20 flex items-center justify-center active:scale-95 transition-transform text-sm border border-indigo-500"
+            )}
+
+            {/* ══════════════ SHARED BANNER ══════════════ */}
+            <TaskModuleBanner onNewTask={canEdit ? openNew : null} canEdit={canEdit}>
+                {/* Filter toggle in the tabs bar */}
+                <button
+                    onClick={() => setShowFilters(f => !f)}
+                    className={`relative px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 text-xs border transition-all active:scale-95 ${
+                        showFilters
+                            ? 'bg-indigo-600/15 text-indigo-400 border-indigo-500/40'
+                            : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-600 hover:text-slate-300'
+                    }`}
+                >
+                    {showFilters ? <X className="w-3.5 h-3.5" /> : <Filter className="w-3.5 h-3.5" />}
+                    Filtros
+                    {(search || filterProject || filterAssignee || filterPriority) && (
+                        <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-indigo-500 text-white text-[8px] font-bold flex items-center justify-center shadow">
+                            {[search, filterProject, filterAssignee, filterPriority].filter(Boolean).length}
+                        </span>
+                    )}
+                </button>
+            </TaskModuleBanner>
+
+            {/* ══════════════ FILTERS BAR (collapsible) ══════════════ */}
+            {showFilters && (
+                <div className="flex flex-wrap gap-3 items-center flex-shrink-0 animate-in fade-in slide-in-from-top-2 duration-200 px-6 py-3">
+                    {/* Search */}
+                    <div className="relative flex-1 min-w-[200px]">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                        <input
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Buscar tareas..."
+                            className="pl-10 pr-4 py-2.5 w-full border border-slate-700/60 rounded-xl text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 bg-slate-900/60 backdrop-blur-sm placeholder:text-slate-600 transition-all"
+                        />
+                    </div>
+                    {/* Dropdowns */}
+                    <select
+                        value={filterProject}
+                        onChange={e => setFilterProject(e.target.value)}
+                        className="px-4 py-2.5 border border-slate-700/60 rounded-xl text-sm text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/50 bg-slate-900/60 backdrop-blur-sm cursor-pointer hover:border-slate-600 transition-all"
                     >
-                        <Plus className="mr-2 w-4 h-4" /> Nueva Tarea
-                    </button>
-                )}
-            </div>
-
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2 items-center bg-slate-900/50 p-3 rounded-xl border border-slate-800 flex-shrink-0">
-                <div className="relative flex-1 min-w-[180px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Buscar tareas..."
-                        className="pl-10 pr-4 py-2.5 w-full border border-slate-700 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800"
-                    />
+                        <option value="">Todos los proyectos</option>
+                        {engProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    <select
+                        value={filterAssignee}
+                        onChange={e => setFilterAssignee(e.target.value)}
+                        className="px-4 py-2.5 border border-slate-700/60 rounded-xl text-sm text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/50 bg-slate-900/60 backdrop-blur-sm cursor-pointer hover:border-slate-600 transition-all"
+                    >
+                        <option value="">Todos los miembros</option>
+                        {teamMembers.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>)}
+                    </select>
+                    <select
+                        value={filterPriority}
+                        onChange={e => setFilterPriority(e.target.value)}
+                        className="px-4 py-2.5 border border-slate-700/60 rounded-xl text-sm text-slate-300 outline-none focus:ring-2 focus:ring-indigo-500/50 bg-slate-900/60 backdrop-blur-sm cursor-pointer hover:border-slate-600 transition-all"
+                    >
+                        <option value="">Todas las prioridades</option>
+                        {Object.entries(TASK_PRIORITY_CONFIG).map(([key, cfg]) => (
+                            <option key={key} value={key}>{cfg.label}</option>
+                        ))}
+                    </select>
                 </div>
-                <select
-                    value={filterProject}
-                    onChange={e => setFilterProject(e.target.value)}
-                    className="px-3 py-2.5 border border-slate-700 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800 min-w-[140px]"
-                >
-                    <option value="">Todos los proyectos</option>
-                    {engProjects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <select
-                    value={filterAssignee}
-                    onChange={e => setFilterAssignee(e.target.value)}
-                    className="px-3 py-2.5 border border-slate-700 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800 min-w-[140px]"
-                >
-                    <option value="">Todos los miembros</option>
-                    {teamMembers.map(u => <option key={u.uid} value={u.uid}>{u.displayName || u.email}</option>)}
-                </select>
-                <select
-                    value={filterPriority}
-                    onChange={e => setFilterPriority(e.target.value)}
-                    className="px-3 py-2.5 border border-slate-700 rounded-lg text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-800 min-w-[120px]"
-                >
-                    <option value="">Todas las prioridades</option>
-                    {Object.entries(TASK_PRIORITY_CONFIG).map(([key, cfg]) => (
-                        <option key={key} value={key}>{cfg.icon} {cfg.label}</option>
-                    ))}
-                </select>
-            </div>
+            )}
 
-            {/* Kanban Board with DnD */}
+            {/* ══════════════ KANBAN BOARD ══════════════ */}
             <DndContext
                 sensors={sensors}
                 collisionDetection={closestCorners}
@@ -280,8 +307,8 @@ export default function TaskManager() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
             >
-                <div className="flex-1 overflow-x-auto pb-4">
-                    <div className="flex gap-4 h-full min-h-[400px]">
+                <div className="flex-1 overflow-x-auto pb-4 px-6 pt-4">
+                    <div className="flex gap-5 h-full min-h-[400px]">
                         {KANBAN_COLUMNS.map((status) => {
                             const columnTasks = tasksByStatus[status] || [];
                             return (
@@ -291,8 +318,8 @@ export default function TaskManager() {
                                         strategy={verticalListSortingStrategy}
                                     >
                                         {columnTasks.length === 0 ? (
-                                            <div className="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center min-h-[80px] flex items-center justify-center">
-                                                <p className="text-[11px] text-slate-600 font-bold">Sin tareas</p>
+                                            <div className="border-2 border-dashed border-slate-700/50 rounded-2xl p-8 text-center min-h-[100px] flex items-center justify-center">
+                                                <p className="text-[12px] text-slate-600 font-medium">Sin tareas</p>
                                             </div>
                                         ) : (
                                             columnTasks.map(task => (
@@ -313,7 +340,7 @@ export default function TaskManager() {
                     </div>
                 </div>
 
-                {/* Drag Overlay — renders the card being dragged */}
+                {/* Drag Overlay */}
                 <DragOverlay dropAnimation={{
                     duration: 200,
                     easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
@@ -333,53 +360,27 @@ export default function TaskManager() {
                 </DragOverlay>
             </DndContext>
 
-            {/* Blocked / Cancelled Section */}
-            {(blockedTasks.length > 0 || cancelledTasks.length > 0) && (
-                <div className="bg-slate-900/50 rounded-xl border border-slate-800 p-4 flex-shrink-0">
-                    {blockedTasks.length > 0 && (
-                        <div className="mb-4">
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TASK_STATUS_CONFIG.blocked.color }} />
-                                <h3 className="text-xs font-black text-red-400 uppercase tracking-widest">
-                                    Bloqueadas ({blockedTasks.length})
-                                </h3>
-                            </div>
-                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {blockedTasks.map(task => (
-                                    <TaskCard
-                                        key={task.id}
-                                        task={task}
-                                        project={engProjects.find(p => p.id === task.projectId)}
-                                        teamMembers={teamMembers}
-                                        subtasks={engSubtasks.filter(s => s.taskId === task.id)}
-                                        onClick={() => openTask(task)}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                    {cancelledTasks.length > 0 && (
-                        <div>
-                            <div className="flex items-center gap-2 mb-3">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TASK_STATUS_CONFIG.cancelled.color }} />
-                                <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-                                    Canceladas ({cancelledTasks.length})
-                                </h3>
-                            </div>
-                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {cancelledTasks.map(task => (
-                                    <TaskCard
-                                        key={task.id}
-                                        task={task}
-                                        project={engProjects.find(p => p.id === task.projectId)}
-                                        teamMembers={teamMembers}
-                                        subtasks={engSubtasks.filter(s => s.taskId === task.id)}
-                                        onClick={() => openTask(task)}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
+            {/* ══════════════ CANCELLED (separate, collapsed) ══════════════ */}
+            {cancelledTasks.length > 0 && (
+                <div className="bg-slate-900/50 rounded-2xl border border-slate-800/60 p-5 flex-shrink-0 mx-6 mb-4">
+                    <div className="flex items-center gap-2.5 mb-3">
+                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: TASK_STATUS_CONFIG.cancelled.color }} />
+                        <h3 className="text-[11px] font-black text-slate-500 uppercase tracking-[0.15em]">
+                            Canceladas ({cancelledTasks.length})
+                        </h3>
+                    </div>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {cancelledTasks.map(task => (
+                            <TaskCard
+                                key={task.id}
+                                task={task}
+                                project={engProjects.find(p => p.id === task.projectId)}
+                                teamMembers={teamMembers}
+                                subtasks={engSubtasks.filter(s => s.taskId === task.id)}
+                                onClick={() => openTask(task)}
+                            />
+                        ))}
+                    </div>
                 </div>
             )}
         </div>

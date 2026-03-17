@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
-import { X, User, Clock } from 'lucide-react';
+import { X, User, Clock, AlertTriangle } from 'lucide-react';
 import { PLANNER_START_HOUR, SLOT_HEIGHT_PX } from './PlannerGrid';
 
 const PRIORITY_STYLES = {
@@ -11,13 +11,17 @@ const PRIORITY_STYLES = {
 };
 
 /**
+ * PlannerTaskBlock — renders a single time block on the planner grid.
+ *
  * Three rendering modes based on totalColumns:
  *   1  → NORMAL: full horizontal info
  *   2  → COMPACT: smaller horizontal info
  *   ≥3 → VERTICAL: ALL info rotated 90°, reads bottom→top
  *
- * Vertical mode uses writing-mode: vertical-lr + rotate(180deg)
- * so text flows naturally when you read the narrow column.
+ * Data source: enriched plan items. Uses `item.title` and
+ * `item.assigneeDisplayName` which come from live task data
+ * via enrichPlanItemsWithTasks(). Falls back to legacy snapshot
+ * fields if the task is not found (item._taskNotFound).
  */
 export default function PlannerTaskBlock({
     item,
@@ -37,9 +41,17 @@ export default function PlannerTaskBlock({
 
     useEffect(() => { liveHeightRef.current = height; }, [height]);
 
+    // Resolve display values from enriched data
+    // (enrichPlanItemsWithTasks already handles fallback to snapshots)
+    const displayTitle    = item.title || item.taskTitleSnapshot || '(Sin título)';
+    const displayAssignee = item.assigneeDisplayName || item.assignedToName || '';
+    const isOrphan        = item._taskNotFound;
+
     const styleClass = isConflict
         ? 'bg-rose-500 border-rose-700 text-white ring-2 ring-rose-300'
-        : (PRIORITY_STYLES[item.priority] || PRIORITY_STYLES.medium);
+        : isOrphan
+            ? 'bg-slate-600 border-slate-700 text-white ring-1 ring-amber-500/50'
+            : (PRIORITY_STYLES[item.priority] || PRIORITY_STYLES.medium);
 
     const isCompact  = totalColumns === 2;
     const isVertical = totalColumns >= 3;
@@ -140,6 +152,13 @@ export default function PlannerTaskBlock({
                         className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-white/80 hover:text-white z-10"
                     ><X className="w-2.5 h-2.5" /></button>
 
+                    {/* Orphan warning icon */}
+                    {isOrphan && (
+                        <div className="absolute top-0.5 left-0.5 z-10" title="Tarea no encontrada">
+                            <AlertTriangle className="w-2.5 h-2.5 text-amber-400" />
+                        </div>
+                    )}
+
                     {/* LEFT 60% — task title (vertical, reads bottom→top) */}
                     <div
                         className="flex items-center justify-center overflow-hidden py-2 pl-1.5 pr-0.5"
@@ -160,7 +179,7 @@ export default function PlannerTaskBlock({
                                 wordBreak:       'break-word',
                             }}
                         >
-                            {item.taskTitleSnapshot}
+                            {displayTitle}
                         </span>
                     </div>
 
@@ -179,7 +198,7 @@ export default function PlannerTaskBlock({
                                 {item.plannedHours.toFixed(1)}h
                             </span>
                         )}
-                        {item.assignedToName && (
+                        {displayAssignee && (
                             <span
                                 className="text-[9px] font-semibold text-white/80 leading-none"
                                 style={{
@@ -190,7 +209,7 @@ export default function PlannerTaskBlock({
                                     wordBreak:       'break-word',
                                 }}
                             >
-                                {item.assignedToName.split(' ')[0]}
+                                {displayAssignee.split(' ')[0]}
                             </span>
                         )}
                     </div>
@@ -204,7 +223,8 @@ export default function PlannerTaskBlock({
                 <div className="px-1.5 py-1 flex flex-col h-full overflow-hidden">
                     <div className="flex items-start justify-between gap-0.5">
                         <p className="text-[10px] font-black leading-tight line-clamp-2 flex-1 break-words">
-                            {item.taskTitleSnapshot}
+                            {isOrphan && <AlertTriangle className="w-2.5 h-2.5 text-amber-400 inline mr-0.5" />}
+                            {displayTitle}
                         </p>
                         <button
                             onClick={e => { e.stopPropagation(); onDelete && onDelete(); }}
@@ -214,10 +234,10 @@ export default function PlannerTaskBlock({
 
                     {height > 60 && (
                         <div className="mt-auto space-y-0.5">
-                            {item.assignedToName && (
+                            {displayAssignee && (
                                 <div className="flex items-center gap-0.5 text-[8px] font-bold text-white/80 truncate">
                                     <User className="w-2 h-2 shrink-0" />
-                                    <span className="truncate">{item.assignedToName}</span>
+                                    <span className="truncate">{displayAssignee}</span>
                                 </div>
                             )}
                             <div className="text-[8px] font-bold text-white/70">{timeLabel}</div>
@@ -235,7 +255,8 @@ export default function PlannerTaskBlock({
                 <div className="px-2 py-1.5 flex flex-col h-full overflow-hidden">
                     <div className="flex items-start justify-between gap-1">
                         <p className="text-[11px] font-black leading-tight line-clamp-2 flex-1">
-                            {item.taskTitleSnapshot}
+                            {isOrphan && <AlertTriangle className="w-3 h-3 text-amber-400 inline mr-0.5" />}
+                            {displayTitle}
                         </p>
                         <button
                             onClick={e => { e.stopPropagation(); onDelete && onDelete(); }}
@@ -245,10 +266,10 @@ export default function PlannerTaskBlock({
 
                     {height > 50 && (
                         <div className="mt-auto space-y-0.5">
-                            {item.assignedToName && (
+                            {displayAssignee && (
                                 <div className="flex items-center gap-1 text-[9px] font-bold text-white/80 truncate">
                                     <User className="w-2.5 h-2.5 shrink-0" />
-                                    <span className="truncate">{item.assignedToName}</span>
+                                    <span className="truncate">{displayAssignee}</span>
                                 </div>
                             )}
                             {timeLabel && (
